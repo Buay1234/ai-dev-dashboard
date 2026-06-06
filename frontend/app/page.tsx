@@ -13,6 +13,7 @@ export default function Home() {
   const [robinResult, setRobinResult] = useState("");
   const [zoroResult, setZoroResult] = useState("");
   const [usoppResult, setUsoppResult] = useState("");
+  const [history, setHistory] = useState<string[]>([]);
   const startMission = async () => {
 
     setLoading(true);
@@ -46,7 +47,10 @@ USOPP:
 `,
       }),
     });
-
+    setHistory(prev => [
+      requirement,
+      ...prev,
+    ]);
     const data = await response.json();
     const text = data.result;
 
@@ -114,29 +118,109 @@ USOPP:
         <div className="bg-slate-800 p-4 rounded-lg">
           <h2>🧠 Robin</h2>
           <p>Business Analyst</p>
-          <p>Status : {robinStatus}</p>
+          <p>
+            Status :
+            <span
+              className={
+                robinStatus === "Completed"
+                  ? "text-green-400"
+                  : robinStatus === "Working"
+                    ? "text-yellow-400"
+                    : "text-gray-400"
+              }
+            >
+              {" "}{robinStatus}
+            </span>
+          </p>
         </div>
 
         <div className="bg-slate-800 p-4 rounded-lg">
           <h2>⚔️ Zoro</h2>
           <p>Backend Developer</p>
-          <p>Status : {zoroStatus}</p>
+          <p>
+            Status :
+            <span
+              className={
+                zoroStatus === "Completed"
+                  ? "text-green-400"
+                  : zoroStatus === "Working"
+                    ? "text-yellow-400"
+                    : "text-gray-400"
+              }
+            >
+              {" "}{zoroStatus}
+            </span>
+          </p>
         </div>
 
         <div className="bg-slate-800 p-4 rounded-lg">
           <h2>🔫 Usopp</h2>
           <p>QA Tester</p>
-          <p>Status : {usoppStatus}</p>
+          <p>
+            Status :
+            <span
+              className={
+                usoppStatus === "Completed"
+                  ? "text-green-400"
+                  : usoppStatus === "Working"
+                    ? "text-yellow-400"
+                    : "text-gray-400"
+              }
+            >
+              {" "}{usoppStatus}
+            </span>
+          </p>
         </div>
 
       </div>
+      <div className="grid grid-cols-3 gap-4 mt-6">
 
+        <div className="bg-slate-800 p-4 rounded-lg">
+          <h2 className="font-bold mb-2">
+            🧠 Robin Result
+          </h2>
+
+          <pre className="whitespace-pre-wrap text-sm">
+            {robinResult}
+          </pre>
+        </div>
+
+        <div className="bg-slate-800 p-4 rounded-lg">
+          <h2 className="font-bold mb-2">
+            ⚔️ Zoro Result
+          </h2>
+
+          <pre className="whitespace-pre-wrap text-sm">
+            {zoroResult}
+          </pre>
+        </div>
+
+        <div className="bg-slate-800 p-4 rounded-lg">
+          <h2 className="font-bold mb-2">
+            🔫 Usopp Result
+          </h2>
+
+          <pre className="whitespace-pre-wrap text-sm">
+            {usoppResult}
+          </pre>
+        </div>
+
+      </div>
       <div className="mt-10 bg-slate-800 p-5 rounded-lg">
-        <h2 className="text-xl mb-3">Mission Result</h2>
 
-        <pre className="whitespace-pre-wrap">
-          {result}
-        </pre>
+        <h2 className="text-xl mb-3">
+          Project History
+        </h2>
+
+        {history.map((item, index) => (
+          <div
+            key={index}
+            className="border-b border-slate-700 py-2"
+          >
+            {item}
+          </div>
+        ))}
+
       </div>
 
     </div>
