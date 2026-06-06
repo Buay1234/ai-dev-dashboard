@@ -258,9 +258,9 @@ export default function Home() {
           Start Mission
         </button>
 
-        <button>
+        {/* <button>
           Download Result
-        </button>
+        </button> */}
 
       </div>
       <div className="mt-4">
