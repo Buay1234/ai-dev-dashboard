@@ -1,7 +1,14 @@
 "use client";
-
+import ActivityLog
+  from "./components/ActivityLog";
 import { useState } from "react";
-
+import AgentCard from "./components/AgentCard";
+import ResultCard from "./components/ResultCard";
+import DashboardStats from "./components/DashboardStats";
+import ProgressBar from "./components/ProgressBar";
+import MissionForm from "./components/MissionForm";
+import HistoryPanel from "./components/HistoryPanel";
+import jsPDF from "jspdf";
 export default function Home() {
 
   const [requirement, setRequirement] = useState("");
@@ -20,7 +27,112 @@ export default function Home() {
   const [robinResult, setRobinResult] = useState("");
   const [zoroResult, setZoroResult] = useState("");
   const [usoppResult, setUsoppResult] = useState("");
+
+
+
+  const [logs, setLogs] = useState<string[]>([]);
   const [history, setHistory] = useState<string[]>([]);
+  const addLog = (message: string) => {
+    setLogs(prev => [
+      `${new Date().toLocaleTimeString()} - ${message}`,
+      ...prev,
+    ]);
+  };
+  const exportMarkdown = () => {
+
+    const content = `
+# Business Analysis
+
+${robinResult}
+
+# Backend Design
+
+${zoroResult}
+
+# Frontend Design
+
+${namiResult}
+
+# Architecture
+
+${frankyResult}
+
+# Test Cases
+
+${usoppResult}
+`;
+
+    const blob =
+      new Blob(
+        [content],
+        { type: "text/markdown" }
+      );
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const a =
+      document.createElement("a");
+
+    a.href = url;
+    a.download = "project-report.md";
+
+    a.click();
+  };
+  const exportPdf = () => {
+
+    const pdf = new jsPDF();
+
+    const report = `
+AI Development Crew Report
+
+=====================
+
+Business Analysis
+
+${robinResult}
+
+=====================
+
+Backend Design
+
+${zoroResult}
+
+=====================
+
+Frontend Design
+
+${namiResult}
+
+=====================
+
+Architecture
+
+${frankyResult}
+
+=====================
+
+Test Cases
+
+${usoppResult}
+`;
+
+    const lines =
+      pdf.splitTextToSize(
+        report,
+        180
+      );
+
+    pdf.text(
+      lines,
+      10,
+      10
+    );
+
+    pdf.save(
+      "project-report.pdf"
+    );
+  };
   const startMission = async () => {
     if (!requirement.trim()) {
       alert("Please enter requirement");
@@ -45,7 +157,8 @@ export default function Home() {
         `${new Date().toLocaleString()} - ${requirement}`,
         ...prev,
       ]);
-
+      addLog("Robin Started");
+      addLog("Robin Completed");
       const robinResponse = await fetch("/api/robin", {
         method: "POST",
         headers: {
@@ -75,8 +188,8 @@ export default function Home() {
       setRobinResult(robinData.result);
 
 
-
-
+      addLog("Zoro Started");
+      addLog("Zoro Completed");
       const zoroResponse = await fetch("/api/zoro", {
         method: "POST",
         headers: {
@@ -98,6 +211,8 @@ export default function Home() {
       setCurrentAgent("Nami");
       setNamiStatus("Working");
 
+      addLog("Nami Started");
+      addLog("Nami Completed");
       const namiResponse =
         await fetch("/api/nami", {
           method: "POST",
@@ -120,6 +235,9 @@ export default function Home() {
       setProgress(60);
       setCurrentAgent("Franky");
       setFrankyStatus("Working");
+
+      addLog("Franky Started");
+      addLog("Franky Completed");
       const frankyResponse =
         await fetch("/api/franky", {
           method: "POST",
@@ -148,6 +266,8 @@ export default function Home() {
       setCurrentAgent("Usopp");
       setUsoppStatus("Working");
 
+      addLog("Usopp Started");
+      addLog("Usopp Completed");
       const usoppResponse = await fetch("/api/usopp", {
         method: "POST",
         headers: {
@@ -225,82 +345,51 @@ export default function Home() {
       <p className="text-slate-400">
         AI Software House Dashboard V2.5
       </p>
-      <textarea
-        value={requirement}
-        onChange={(e) => setRequirement(e.target.value)}
-        className="w-full h-32 bg-white text-black p-4 rounded-lg"
-        placeholder="สร้างระบบ Login..."
+      <MissionForm
+        requirement={requirement}
+        setRequirement={setRequirement}
+        loading={loading}
+        startMission={startMission}
       />
-
-      <button
-        disabled={loading}
-        onClick={startMission}
-        className={`
-        mt-4 px-5 py-2 rounded-lg flex items-center gap-2
-        ${loading
-            ? "bg-gray-600 cursor-not-allowed"
-            : "bg-blue-600 hover:bg-blue-700"}
-      `}
-      >
-        {loading && (
-          <span className="animate-spin">
-            ⚙️
-          </span>
-        )}
-
-        {loading
-          ? "Running..."
-          : "Start Mission"}
-      </button>
+      <ProgressBar
+        progress={progress}
+        currentAgent={currentAgent}
+      />
       <div className="flex gap-3 mt-4">
 
-        <button>
-          Start Mission
+        <button
+          onClick={exportMarkdown}
+          className="
+      bg-green-600
+      hover:bg-green-700
+      px-4
+      py-2
+      rounded-lg
+    "
+        >
+          📄 Markdown
         </button>
 
-        {/* <button>
-          Download Result
-        </button> */}
+        <button
+          onClick={exportPdf}
+          className="
+      bg-red-600
+      hover:bg-red-700
+      px-4
+      py-2
+      rounded-lg
+    "
+        >
+          📕 PDF
+        </button>
 
       </div>
-      <div className="mt-4">
+      <ActivityLog logs={logs} />
+      <DashboardStats
+        projectCount={projectCount}
+        successCount={successCount}
+      />
 
-        <div className="bg-slate-700 h-3 rounded-full">
-
-          <div
-            className="bg-green-500 h-3 rounded-full transition-all duration-500"
-            style={{
-              width: `${progress}%`
-            }}
-          />
-
-        </div>
-
-        <p className="text-sm text-slate-300 mt-2">
-          Progress : {progress}%
-        </p>
-
-      </div>
-      <div className="mt-2 text-yellow-400">
-        Current Agent : {currentAgent}
-      </div>
-      <div className="grid grid-cols-2 gap-4 mt-4">
-
-        <div className="bg-slate-800 p-4 rounded-lg">
-          <h3>Total Projects</h3>
-          <p className="text-2xl font-bold">
-            {projectCount}
-          </p>
-        </div>
-
-        <div className="bg-slate-800 p-4 rounded-lg">
-          <h3>Success</h3>
-          <p className="text-2xl font-bold text-green-400">
-            {successCount}
-          </p>
-        </div>
-
-      </div>
       <div className="bg-slate-800 p-4 rounded-lg mt-4">
         <h2 className="font-bold mb-2">
           📋 Current Requirement
@@ -310,191 +399,78 @@ export default function Home() {
           {requirement || "No Active Requirement"}
         </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-10">
 
-        <div className="bg-slate-800 p-4 rounded-lg">
-          <h2>🧠 Robin</h2>
-          <p>Business Analyst</p>
-          <p>
-            Status :
-            <span
-              className={
-                robinStatus === "Completed"
-                  ? "text-green-400"
-                  : robinStatus === "Error"
-                    ? "text-red-400"
-                    : robinStatus === "Working"
-                      ? "text-yellow-400"
-                      : "text-gray-400"
-              }
-            >
-              {" "}{robinStatus}
-            </span>
-          </p>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mt-6">
 
-        <div className="bg-slate-800 p-4 rounded-lg">
-          <h2>⚔️ Zoro</h2>
-          <p>Backend Developer</p>
-          <p>
-            Status :
-            <span
-              className={
-                zoroStatus === "Completed"
-                  ? "text-green-400"
-                  : zoroStatus === "Error"
-                    ? "text-red-400"
-                    : zoroStatus.includes("Waiting")
-                      ? "text-blue-400"
-                      : zoroStatus === "Working"
-                        ? "text-yellow-400"
-                        : "text-gray-400"
-              }
-            >
-              {" "}{zoroStatus}
-            </span>
-          </p>
-        </div>
-        <div className="bg-slate-800 p-4 rounded-lg">
-          <h2>🧭 Nami</h2>
-          <p>Frontend Developer</p>
-          <p>
-            Status :
-            <span
-              className={
-                namiStatus === "Completed"
-                  ? "text-green-400"
-                  : namiStatus === "Error"
-                    ? "text-red-400"
-                    : namiStatus === "Working"
-                      ? "text-yellow-400"
-                      : "text-gray-400"
-              }
-            >
-              {" "}{namiStatus}
-            </span>
-          </p>
-        </div>
-        <div className="bg-slate-800 p-4 rounded-lg">
-          <h2>🔨 Franky</h2>
-          <p>Full Stack Architect</p>
+        <AgentCard
+          icon="🧠"
+          name="Robin"
+          role="Business Analyst"
+          status={robinStatus}
+        />
 
-          <p>
-            Status :
-            <span
-              className={
-                frankyStatus === "Completed"
-                  ? "text-green-400"
-                  : frankyStatus === "Error"
-                    ? "text-red-400"
-                    : frankyStatus === "Working"
-                      ? "text-yellow-400"
-                      : "text-gray-400"
-              }
-            >
-              {" "}{frankyStatus}
-            </span>
-          </p>
-        </div>
-        <div className="bg-slate-800 p-4 rounded-lg">
-          <h2>🔫 Usopp</h2>
-          <p>QA Tester</p>
-          <p>
-            Status :
-            <span
-              className={
-                usoppStatus === "Completed"
-                  ? "text-green-400"
-                  : usoppStatus === "Error"
-                    ? "text-red-400"
-                    : usoppStatus.includes("Waiting")
-                      ? "text-blue-400"
-                      : usoppStatus === "Working"
-                        ? "text-yellow-400"
-                        : "text-gray-400"
-              }
-            >
-              {" "}{usoppStatus}
-            </span>
-          </p>
-        </div>
+        <AgentCard
+          icon="⚔️"
+          name="Zoro"
+          role="Backend Developer"
+          status={zoroStatus}
+        />
+
+        <AgentCard
+          icon="🧭"
+          name="Nami"
+          role="Frontend Developer"
+          status={namiStatus}
+        />
+
+        <AgentCard
+          icon="🔨"
+          name="Franky"
+          role="Full Stack Architect"
+          status={frankyStatus}
+        />
+
+        <AgentCard
+          icon="🔫"
+          name="Usopp"
+          role="QA Tester"
+          status={usoppStatus}
+        />
 
       </div>
-      <div
-        className="
-        grid
-        grid-cols-1
-        md:grid-cols-2
-        xl:grid-cols-5
-        gap-4
-        mt-6
-      "
-      >
 
-        <div className="bg-slate-800 p-4 rounded-lg min-h-[400px]">
-          <h2 className="font-bold mb-2">
-            🧠 Robin Result
-          </h2>
 
-          <pre className="whitespace-pre-wrap text-sm">
-            {robinResult}
-          </pre>
-        </div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mt-6">
 
-        <div className="bg-slate-800 p-4 rounded-lg min-h-[400px]">
-          <h2 className="font-bold mb-2">
-            ⚔️ Zoro Result
-          </h2>
+        <ResultCard
+          title="🧠 Robin Result"
+          result={robinResult}
+        />
 
-          <pre className="whitespace-pre-wrap text-sm">
-            {zoroResult}
-          </pre>
-        </div>
-        <div className="bg-slate-800 p-4 rounded-lg min-h-[400px]">
-          <h2 className="font-bold mb-2">
-            🧭 Nami Result
-          </h2>
+        <ResultCard
+          title="⚔️ Zoro Result"
+          result={zoroResult}
+        />
 
-          <pre className="whitespace-pre-wrap text-sm">
-            {namiResult}
-          </pre>
-        </div>
-        <div className="bg-slate-800 p-4 rounded-lg min-h-[400px]">
-          <h2 className="font-bold mb-2">
-            🔨 Franky Result
-          </h2>
+        <ResultCard
+          title="🧭 Nami Result"
+          result={namiResult}
+        />
 
-          <pre className="whitespace-pre-wrap text-sm">
-            {frankyResult}
-          </pre>
-        </div>
-        <div className="bg-slate-800 p-4 rounded-lg min-h-[400px]">
-          <h2 className="font-bold mb-2">
-            🔫 Usopp Result
-          </h2>
+        <ResultCard
+          title="🔨 Franky Result"
+          result={frankyResult}
+        />
 
-          <pre className="whitespace-pre-wrap text-sm">
-            {usoppResult}
-          </pre>
-        </div>
+        <ResultCard
+          title="🔫 Usopp Result"
+          result={usoppResult}
+        />
 
       </div>
-      <div className="mt-10 bg-slate-800 p-5 rounded-lg">
 
-        <h2 className="text-xl mb-3">
-          Project History
-        </h2>
 
-        {history.map((item, index) => (
-          <div
-            key={index}
-            className="border-b border-slate-700 py-2"
-          >
-            {item}
-          </div>
-        ))}
-
-      </div>
+      <HistoryPanel history={history} />
 
     </div>
   );
