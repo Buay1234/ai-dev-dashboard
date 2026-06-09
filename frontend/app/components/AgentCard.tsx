@@ -20,6 +20,33 @@ export default function AgentCard({
     return "text-gray-400";
   };
 
+  const renderStatus = () => {
+    if (status === "Working") {
+      return (
+        <>
+          <motion.span
+            className="inline-block"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          >
+            ⚙️
+          </motion.span>
+          {" "}Working...
+        </>
+      );
+    }
+
+    if (status === "Completed") {
+      return <>✅ Completed</>;
+    }
+
+    if (status === "Error") {
+      return <>❌ Error</>;
+    }
+
+    return status;
+  };
+
   return (
     <motion.div
       className="bg-slate-800 p-4 rounded-lg"
@@ -33,7 +60,7 @@ export default function AgentCard({
       <p>
         Status :
         <span className={getColor()}>
-          {" "}{status}
+          {" "}{renderStatus()}
         </span>
       </p>
     </motion.div>
