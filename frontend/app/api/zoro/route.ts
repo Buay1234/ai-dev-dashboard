@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   const response =
     await ai.models.generateContent({
 
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash-lite",
 
       contents: `
 คุณคือ Senior ASP.NET Core 10 Developer
@@ -43,21 +43,28 @@ ${body.analysis}
 
 สร้างไฟล์ต่อไปนี้
 
-# File: User.cs
+Program.cs
 
-# File: LoginRequest.cs
+appsettings.json
 
-# File: RegisterRequest.cs
+User.cs
 
-# File: IAuthService.cs
+LoginRequest.cs
+RegisterRequest.cs
 
-# File: AuthService.cs
+IAuthService.cs
+AuthService.cs
 
-# File: IUserRepository.cs
+IUserRepository.cs
+UserRepository.cs
 
-# File: UserRepository.cs
+AppDbContext.cs
 
-# File: AuthController.cs
+ServiceCollectionExtensions.cs
+
+ExceptionMiddleware.cs
+
+AuthController.cs
 
 Technology
 

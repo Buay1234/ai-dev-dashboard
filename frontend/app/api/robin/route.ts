@@ -9,7 +9,7 @@ export async function POST(req: Request) {
         const body = await req.json();
 
         const response = await ai.models.generateContent({
-            model: "gemini-2.0-flash",
+            model: "gemini-2.5-flash-lite",
             contents: `
 คุณคือ Senior Business Analyst ที่มีประสบการณ์มากกว่า 15 ปี
 

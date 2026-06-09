@@ -41,7 +41,7 @@ export default function Home() {
     const files = [];
 
     const regex =
-      /# File:\s(.+?)\n```[\w]*\n([\s\S]*?)```/g;
+      /# File:\s(.+?)\s+```[\w]*\n([\s\S]*?)```/g;
 
     let match;
 
@@ -66,6 +66,7 @@ export default function Home() {
     );
 
   };
+
   const addLog = (message: string) => {
     setLogs(prev => [
       `${new Date().toLocaleTimeString()} - ${message}`,
@@ -167,6 +168,103 @@ ${usoppResult}
       "project-report.pdf"
     );
   };
+  const generateZip = async () => {
+
+    const zip = new JSZip();
+
+    const files =
+      extractFiles(zoroResult);
+    const getFolder = (
+      fileName: string
+    ) => {
+
+      if (
+        fileName === "Program.cs"
+      )
+        return "";
+
+      if (
+        fileName.includes("appsettings")
+      )
+        return "";
+
+      if (
+        fileName.includes("DbContext")
+      )
+        return "Data";
+
+      if (
+        fileName.includes("Middleware")
+      )
+        return "Middleware";
+
+      if (
+        fileName.includes("Extensions")
+      )
+        return "Extensions";
+
+      if (
+        fileName.includes("Controller")
+      )
+        return "Controllers";
+
+      if (
+        fileName.includes("Repository")
+      )
+        return "Repositories";
+
+      if (
+        fileName.includes("Request")
+      )
+        return "DTOs";
+
+      if (
+        fileName.includes("Service")
+      )
+        return "Services";
+
+      if (
+        fileName === "User.cs"
+      )
+        return "Models";
+
+      return "Others";
+    };
+    files.forEach((file) => {
+
+      const folder =
+        getFolder(file.name);
+
+      console.log(
+        "MAPPING:",
+        file.name,
+        "=>",
+        folder
+      );
+
+      zip.file(
+        `src/${folder}/${file.name}`,
+        file.content
+      );
+
+      console.log(
+        "ZIP FILE:",
+        `src/${folder}/${file.name}`
+      );
+
+    });
+
+    const blob =
+      await zip.generateAsync({
+        type: "blob",
+      });
+
+    saveAs(
+      blob,
+      "ai-project.zip"
+    );
+
+  };
   const startMission = async () => {
     if (!requirement.trim()) {
       alert("Please enter requirement");
@@ -192,7 +290,6 @@ ${usoppResult}
         ...prev,
       ]);
       addLog("Robin Started");
-      addLog("Robin Completed");
       const robinResponse = await fetch("/api/robin", {
         method: "POST",
         headers: {
@@ -203,6 +300,7 @@ ${usoppResult}
         }),
 
       });
+      addLog("Robin Completed");
       if (!robinResponse.ok) {
 
         const errorText =
@@ -234,7 +332,6 @@ ${usoppResult}
 
 
       addLog("Zoro Started");
-      addLog("Zoro Completed");
       const zoroResponse = await fetch("/api/zoro", {
         method: "POST",
         headers: {
@@ -244,6 +341,7 @@ ${usoppResult}
           analysis: robinData.result,
         }),
       });
+      addLog("Zoro Completed");
       if (!zoroResponse.ok) {
         throw new Error("zoro Agent Failed");
       }
@@ -257,7 +355,6 @@ ${usoppResult}
       setNamiStatus("Working");
 
       addLog("Nami Started");
-      addLog("Nami Completed");
       const namiResponse =
         await fetch("/api/nami", {
           method: "POST",
@@ -268,6 +365,7 @@ ${usoppResult}
             backendDesign: zoroData.result,
           }),
         });
+      addLog("Nami Completed");
       if (!namiResponse.ok) {
         throw new Error("Nami Agent Failed");
       }
@@ -282,7 +380,6 @@ ${usoppResult}
       setFrankyStatus("Working");
 
       addLog("Franky Started");
-      addLog("Franky Completed");
       const frankyResponse =
         await fetch("/api/franky", {
           method: "POST",
@@ -294,7 +391,7 @@ ${usoppResult}
             frontendDesign: namiData.result,
           }),
         });
-
+      addLog("Franky Completed");
       if (!frankyResponse.ok) {
         throw new Error("Franky Agent Failed");
       }
@@ -306,8 +403,7 @@ ${usoppResult}
           "Franky Error:"
         )
       ) {
-
-        console.log(
+        setFrankyResult(
           frankyData.result
         );
 
@@ -325,7 +421,6 @@ ${usoppResult}
       setUsoppStatus("Working");
 
       addLog("Usopp Started");
-      addLog("Usopp Completed");
       const usoppResponse = await fetch("/api/usopp", {
         method: "POST",
         headers: {
@@ -340,6 +435,7 @@ ${usoppResult}
           `
         }),
       });
+      addLog("Usopp Completed");
       console.log(
         "Usopp Status",
         usoppResponse.status
@@ -461,13 +557,33 @@ ${usoppResult}
           Test Extract
         </button>
         <button
+          type="button"
           onClick={() => {
-            console.log(
-              extractFiles(zoroResult)
-            );
+            console.log(extractFiles(zoroResult));
           }}
         >
           Debug Files
+        </button>
+
+        <button
+          onClick={generateZip}
+          className="
+    bg-blue-600
+    hover:bg-blue-700
+    px-4
+    py-2
+    rounded-lg
+  "
+        >
+          📦 ZIP
+        </button>
+
+        <button
+          onClick={() => {
+            console.log(zoroResult);
+          }}
+        >
+          Show Zoro Result
         </button>
       </div>
       <ActivityLog logs={logs} />
