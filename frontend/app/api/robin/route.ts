@@ -9,7 +9,7 @@ export async function POST(req: Request) {
         const body = await req.json();
 
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash-lite",
+            model: "gemini-2.0-flash",
             contents: `
 คุณคือ Senior Business Analyst ที่มีประสบการณ์มากกว่า 15 ปี
 
@@ -84,8 +84,20 @@ Permission
         });
 
     } catch (error: any) {
-        return Response.json({
-            result: "Gemini Error",
-        });
+        console.error(
+            "Robin Error",
+            error
+        );
+
+        return Response.json(
+            {
+                result:
+                    "Robin Error: " +
+                    error.message,
+            },
+            {
+                status: 500,
+            }
+        );
     }
 }

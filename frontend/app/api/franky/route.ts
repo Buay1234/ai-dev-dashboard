@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     const response =
       await ai.models.generateContent({
 
-        model: "gemini-2.5-flash-lite",
+        model: "gemini-2.0-flash",
 
         contents: `
 คุณคือ Senior Full Stack Architect
@@ -45,8 +45,15 @@ ${body.frontendDesign}
 
   } catch (error: any) {
 
-    return Response.json({
-      result: "Franky Error",
-    });
-  }
+  console.error(
+    "Franky Error",
+    error
+  );
+
+  return Response.json({
+    result:
+      "Franky Error: " +
+      error.message
+  });
+}
 }

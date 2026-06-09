@@ -9,6 +9,8 @@ import ProgressBar from "./components/ProgressBar";
 import MissionForm from "./components/MissionForm";
 import HistoryPanel from "./components/HistoryPanel";
 import jsPDF from "jspdf";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 export default function Home() {
 
   const [requirement, setRequirement] = useState("");
@@ -32,6 +34,38 @@ export default function Home() {
 
   const [logs, setLogs] = useState<string[]>([]);
   const [history, setHistory] = useState<string[]>([]);
+  const extractFiles = (
+    markdown: string
+  ) => {
+
+    const files = [];
+
+    const regex =
+      /# File:\s(.+?)\n```[\w]*\n([\s\S]*?)```/g;
+
+    let match;
+
+    while (
+      (match = regex.exec(markdown))
+      !== null
+    ) {
+
+      files.push({
+        name: match[1].trim(),
+        content: match[2].trim(),
+      });
+
+    }
+
+    return files;
+  };
+  const testExtract = () => {
+
+    console.log(
+      extractFiles(zoroResult)
+    );
+
+  };
   const addLog = (message: string) => {
     setLogs(prev => [
       `${new Date().toLocaleTimeString()} - ${message}`,
@@ -170,7 +204,18 @@ ${usoppResult}
 
       });
       if (!robinResponse.ok) {
-        throw new Error("Robin Agent Failed");
+
+        const errorText =
+          await robinResponse.text();
+
+        console.error(
+          "Robin API Error:",
+          errorText
+        );
+
+        throw new Error(
+          errorText
+        );
       }
       const robinData = await robinResponse.json();
       if (
@@ -256,7 +301,20 @@ ${usoppResult}
 
       const frankyData =
         await frankyResponse.json();
+      if (
+        frankyData.result?.startsWith(
+          "Franky Error:"
+        )
+      ) {
 
+        console.log(
+          frankyData.result
+        );
+
+        setFrankyStatus("Error");
+
+        return;
+      }
       setFrankyResult(
         frankyData.result
       );
@@ -282,6 +340,15 @@ ${usoppResult}
           `
         }),
       });
+      console.log(
+        "Usopp Status",
+        usoppResponse.status
+      );
+
+      console.log(
+        "Usopp OK",
+        usoppResponse.ok
+      );
       if (!usoppResponse.ok) {
         throw new Error("usopp Agent Failed");
       }
@@ -382,7 +449,26 @@ ${usoppResult}
         >
           📕 PDF
         </button>
-
+        <button
+          onClick={testExtract}
+          className="
+    bg-purple-600
+    px-4
+    py-2
+    rounded
+  "
+        >
+          Test Extract
+        </button>
+        <button
+          onClick={() => {
+            console.log(
+              extractFiles(zoroResult)
+            );
+          }}
+        >
+          Debug Files
+        </button>
       </div>
       <ActivityLog logs={logs} />
       <DashboardStats
