@@ -4,6 +4,7 @@ import ActivityLog from "./components/ActivityLog";
 import AgentCard from "./components/AgentCard";
 import ResultCard from "./components/ResultCard";
 import DashboardStats from "./components/DashboardStats";
+import CompanyFloor from "./components/CompanyFloor";
 import ProgressBar from "./components/ProgressBar";
 import MissionTimeline from "./components/MissionTimeline";
 import MissionForm from "./components/MissionForm";
@@ -47,6 +48,15 @@ export default function Home() {
     usopp: usoppResult,
   };
 
+  const agentStatusProps = {
+    currentAgent,
+    robinStatus,
+    zoroStatus,
+    namiStatus,
+    frankyStatus,
+    usoppStatus,
+  };
+
   const exportMarkdown = () => downloadMarkdownReport(agentResults);
   const exportPdf = () => downloadPdfReport(agentResults);
   const generateZip = () => {
@@ -65,14 +75,7 @@ export default function Home() {
         startMission={startMission}
       />
       <ProgressBar progress={progress} currentAgent={currentAgent} />
-      <MissionTimeline
-        currentAgent={currentAgent}
-        robinStatus={robinStatus}
-        zoroStatus={zoroStatus}
-        namiStatus={namiStatus}
-        frankyStatus={frankyStatus}
-        usoppStatus={usoppStatus}
-      />
+      <MissionTimeline {...agentStatusProps} />
       <div className="flex gap-3 mt-4">
         <button
           onClick={exportMarkdown}
@@ -145,6 +148,7 @@ export default function Home() {
         projectCount={projectCount}
         successCount={successCount}
       />
+      <CompanyFloor {...agentStatusProps} />
 
       <div className="bg-slate-800 p-4 rounded-lg mt-4">
         <h2 className="font-bold mb-2">📋 Current Requirement</h2>

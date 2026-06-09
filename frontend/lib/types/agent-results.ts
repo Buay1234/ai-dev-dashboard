@@ -12,3 +12,12 @@ export type AgentResults = {
 };
 
 export type AgentStatus = "Idle" | "Working" | "Completed" | "Error";
+
+export type AgentStatusProps = {
+  currentAgent: string;
+  robinStatus: string;
+  zoroStatus: string;
+  namiStatus: string;
+  frankyStatus: string;
+  usoppStatus: string;
+};

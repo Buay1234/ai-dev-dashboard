@@ -1,16 +1,13 @@
-import { GoogleGenAI } from "@google/genai";
-
-const ai = new GoogleGenAI({
-    apiKey: process.env.GEMINI_API_KEY!,
-});
+import { gemini } from "@/lib/gemini";
+import { getErrorMessage } from "@/lib/get-error-message";
 
 export async function POST(req: Request) {
-    try {
-        const body = await req.json();
+  try {
+    const body = await req.json();
 
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash-lite",
-            contents: `
+    const response = await gemini.models.generateContent({
+      model: "gemini-2.5-flash-lite",
+      contents: `
 คุณคือ Senior Business Analyst ที่มีประสบการณ์มากกว่า 15 ปี
 
 หน้าที่ของคุณคือวิเคราะห์ Requirement จากผู้ใช้งาน และจัดทำ Business Analysis Document สำหรับทีมพัฒนา
@@ -77,27 +74,21 @@ Permission
 
 ตอบเฉพาะผลวิเคราะห์เท่านั้น
 `,
-        });
+    });
 
-        return Response.json({
-            result: response.text,
-        });
+    return Response.json({
+      result: response.text,
+    });
+  } catch (error: unknown) {
+    console.error("Robin Error", error);
 
-    } catch (error: any) {
-        console.error(
-            "Robin Error",
-            error
-        );
-
-        return Response.json(
-            {
-                result:
-                    "Robin Error: " +
-                    error.message,
-            },
-            {
-                status: 500,
-            }
-        );
-    }
+    return Response.json(
+      {
+        result: "Robin Error: " + getErrorMessage(error),
+      },
+      {
+        status: 500,
+      }
+    );
+  }
 }

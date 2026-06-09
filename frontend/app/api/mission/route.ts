@@ -1,14 +1,11 @@
-import { GoogleGenAI } from "@google/genai";
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY!,
-});
+import { gemini } from "@/lib/gemini";
+import { getErrorMessage } from "@/lib/get-error-message";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const response = await ai.models.generateContent({
+    const response = await gemini.models.generateContent({
       model: "gemini-2.5-flash-lite",
       contents: body.prompt,
     });
@@ -16,11 +13,11 @@ export async function POST(req: Request) {
     return Response.json({
       result: response.text,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(error);
 
     return Response.json({
-      result: "Gemini Error : " + error.message,
+      result: "Gemini Error : " + getErrorMessage(error),
     });
   }
 }

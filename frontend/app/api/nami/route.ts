@@ -1,19 +1,11 @@
-import { GoogleGenAI } from "@google/genai";
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY!,
-});
+import { gemini } from "@/lib/gemini";
 
 export async function POST(req: Request) {
-
   const body = await req.json();
 
-  const response =
-    await ai.models.generateContent({
-
-      model: "gemini-2.5-flash-lite",
-
-      contents: `
+  const response = await gemini.models.generateContent({
+    model: "gemini-2.5-flash-lite",
+    contents: `
 คุณคือ Senior Frontend Developer
 
 Backend Design
@@ -28,7 +20,7 @@ ${body.backendDesign}
 4. Tailwind Layout
 5. Responsive Design
 `,
-    });
+  });
 
   return Response.json({
     result: response.text,
