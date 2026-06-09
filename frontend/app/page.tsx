@@ -1,14 +1,20 @@
 "use client";
 
+import { motion } from "framer-motion";
 import ActivityLog from "./components/ActivityLog";
 import AgentCard from "./components/AgentCard";
 import ResultCard from "./components/ResultCard";
 import DashboardStats from "./components/DashboardStats";
 import CompanyFloor from "./components/CompanyFloor";
+import DashboardHeader from "./components/DashboardHeader";
+import ExportToolbar from "./components/ExportToolbar";
 import ProgressBar from "./components/ProgressBar";
 import MissionTimeline from "./components/MissionTimeline";
 import MissionForm from "./components/MissionForm";
 import HistoryPanel from "./components/HistoryPanel";
+import Card, { CardHeader } from "./components/ui/Card";
+import EmptyState from "./components/ui/EmptyState";
+import SectionHeader from "./components/ui/SectionHeader";
 import { useMission } from "@/hooks/use-mission";
 import { extractFiles } from "@/lib/extract-files";
 import { downloadMarkdownReport } from "@/lib/export-markdown";
@@ -65,149 +71,169 @@ export default function Home() {
   const testExtract = () => console.log(extractFiles(zoroResult));
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-10">
-      <h1 className="text-4xl font-bold mb-6">AI Development Crew</h1>
-      <p className="text-slate-400">AI Software House Dashboard V2.5</p>
-      <MissionForm
-        requirement={requirement}
-        setRequirement={setRequirement}
-        loading={loading}
-        startMission={startMission}
+    <div className="min-h-screen bg-surface-0">
+      <div
+        className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(139,92,246,0.08)_0%,_transparent_50%)]"
+        aria-hidden
       />
-      <ProgressBar progress={progress} currentAgent={currentAgent} />
-      <MissionTimeline {...agentStatusProps} />
-      <div className="flex gap-3 mt-4">
-        <button
-          onClick={exportMarkdown}
-          className="
-      bg-green-600
-      hover:bg-green-700
-      px-4
-      py-2
-      rounded-lg
-    "
+
+      <DashboardHeader loading={loading} currentAgent={currentAgent} />
+
+      <main className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
-          📄 Markdown
-        </button>
+          <DashboardStats
+            projectCount={projectCount}
+            successCount={successCount}
+          />
+        </motion.div>
 
-        <button
-          onClick={exportPdf}
-          className="
-      bg-red-600
-      hover:bg-red-700
-      px-4
-      py-2
-      rounded-lg
-    "
-        >
-          📕 PDF
-        </button>
-        <button
-          onClick={testExtract}
-          className="
-    bg-purple-600
-    px-4
-    py-2
-    rounded
-  "
-        >
-          Test Extract
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            console.log(extractFiles(zoroResult));
-          }}
-        >
-          Debug Files
-        </button>
+        <section aria-labelledby="mission-control-heading">
+          <SectionHeader
+            id="mission-control-heading"
+            title="Mission Control"
+            description="Configure, launch, and monitor your AI development crew"
+          />
+          <div className="space-y-4">
+            <MissionForm
+              requirement={requirement}
+              setRequirement={setRequirement}
+              loading={loading}
+              startMission={startMission}
+            />
+            <ProgressBar
+              progress={progress}
+              currentAgent={currentAgent}
+              loading={loading}
+            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <MissionTimeline {...agentStatusProps} />
+              <Card padding="md">
+                <CardHeader
+                  title="Current Requirement"
+                  description="Active mission brief"
+                />
+                {requirement ? (
+                  <p className="text-sm text-text-secondary leading-relaxed">
+                    {requirement}
+                  </p>
+                ) : (
+                  <EmptyState
+                    icon="📋"
+                    title="No active requirement"
+                    description="Enter a requirement above to begin a new mission."
+                  />
+                )}
+              </Card>
+            </div>
+            <ExportToolbar
+              onExportMarkdown={exportMarkdown}
+              onExportPdf={exportPdf}
+              onGenerateZip={generateZip}
+              onTestExtract={testExtract}
+              onDebugFiles={() => console.log(extractFiles(zoroResult))}
+              onShowZoroResult={() => console.log(zoroResult)}
+            />
+          </div>
+        </section>
 
-        <button
-          onClick={generateZip}
-          className="
-    bg-blue-600
-    hover:bg-blue-700
-    px-4
-    py-2
-    rounded-lg
-  "
-        >
-          📦 ZIP
-        </button>
+        <section aria-labelledby="company-floor-heading">
+          <SectionHeader
+            id="company-floor-heading"
+            title="Operations"
+            description="Live floor view and agent activity"
+          />
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="xl:col-span-2 space-y-6">
+              <CompanyFloor {...agentStatusProps} />
+              <div>
+                <SectionHeader
+                  title="Agent Roster"
+                  description="Individual agent status and roles"
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                  <AgentCard
+                    icon="🧠"
+                    name="Robin"
+                    role="Business Analyst"
+                    status={robinStatus}
+                  />
+                  <AgentCard
+                    icon="⚔️"
+                    name="Zoro"
+                    role="Backend Developer"
+                    status={zoroStatus}
+                  />
+                  <AgentCard
+                    icon="🧭"
+                    name="Nami"
+                    role="Frontend Developer"
+                    status={namiStatus}
+                  />
+                  <AgentCard
+                    icon="🔨"
+                    name="Franky"
+                    role="Full Stack Architect"
+                    status={frankyStatus}
+                  />
+                  <AgentCard
+                    icon="🔫"
+                    name="Usopp"
+                    role="QA Tester"
+                    status={usoppStatus}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="space-y-6">
+              <ActivityLog logs={logs} />
+            </div>
+          </div>
+        </section>
 
-        <button
-          onClick={() => {
-            console.log(zoroResult);
-          }}
-        >
-          Show Zoro Result
-        </button>
-      </div>
-      <ActivityLog logs={logs} />
-      <DashboardStats
-        projectCount={projectCount}
-        successCount={successCount}
-      />
-      <CompanyFloor {...agentStatusProps} />
+        <section aria-labelledby="deliverables-heading">
+          <SectionHeader
+            id="deliverables-heading"
+            title="Deliverables"
+            description="Output from each agent in the pipeline"
+          />
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <ResultCard
+              title="Robin — Business Analysis"
+              result={robinResult}
+              status={robinStatus}
+            />
+            <ResultCard
+              title="Zoro — Backend Design"
+              result={zoroResult}
+              status={zoroStatus}
+            />
+            <ResultCard
+              title="Nami — Frontend Design"
+              result={namiResult}
+              status={namiStatus}
+            />
+            <ResultCard
+              title="Franky — Architecture"
+              result={frankyResult}
+              status={frankyStatus}
+            />
+            <ResultCard
+              title="Usopp — Test Cases"
+              result={usoppResult}
+              status={usoppStatus}
+            />
+          </div>
+        </section>
 
-      <div className="bg-slate-800 p-4 rounded-lg mt-4">
-        <h2 className="font-bold mb-2">📋 Current Requirement</h2>
-
-        <p className="text-slate-300">
-          {requirement || "No Active Requirement"}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mt-6">
-        <AgentCard
-          icon="🧠"
-          name="Robin"
-          role="Business Analyst"
-          status={robinStatus}
-        />
-
-        <AgentCard
-          icon="⚔️"
-          name="Zoro"
-          role="Backend Developer"
-          status={zoroStatus}
-        />
-
-        <AgentCard
-          icon="🧭"
-          name="Nami"
-          role="Frontend Developer"
-          status={namiStatus}
-        />
-
-        <AgentCard
-          icon="🔨"
-          name="Franky"
-          role="Full Stack Architect"
-          status={frankyStatus}
-        />
-
-        <AgentCard
-          icon="🔫"
-          name="Usopp"
-          role="QA Tester"
-          status={usoppStatus}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mt-6">
-        <ResultCard title="🧠 Robin Result" result={robinResult} />
-
-        <ResultCard title="⚔️ Zoro Result" result={zoroResult} />
-
-        <ResultCard title="🧭 Nami Result" result={namiResult} />
-
-        <ResultCard title="🔨 Franky Result" result={frankyResult} />
-
-        <ResultCard title="🔫 Usopp Result" result={usoppResult} />
-      </div>
-
-      <HistoryPanel history={history} />
+        <section aria-labelledby="history-heading">
+          <SectionHeader id="history-heading" title="History" description="Past missions" />
+          <HistoryPanel history={history} />
+        </section>
+      </main>
     </div>
   );
 }

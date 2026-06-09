@@ -1,6 +1,8 @@
 "use client";
 
 import MovingRobot from "./MovingRobot";
+import Card, { CardHeader } from "./ui/Card";
+import Badge, { statusToBadgeVariant } from "./ui/Badge";
 import { getActiveAgentIndex, toAgentStatusMap } from "@/lib/agents";
 import type { AgentStatusProps } from "@/lib/types/agent-results";
 
@@ -21,46 +23,37 @@ export default function CompanyFloor(props: AgentStatusProps) {
   const statuses = toAgentStatusMap(props);
   const activeIndex = getActiveAgentIndex(currentAgent);
 
-  const getStatusClasses = (agent: string, status: string) => {
-    if (status === "Completed") return "text-green-400";
-    if (agent === currentAgent || status === "Working") {
-      return "text-yellow-400 animate-pulse";
-    }
-    if (status === "Error") return "text-red-400";
-    return "text-gray-400";
-  };
-
   const getRoomClasses = (agent: string, status: string) => {
     const isCurrent = agent === currentAgent || status === "Working";
 
     if (isCurrent) {
-      return "border-yellow-400 bg-slate-800 ring-2 ring-yellow-400/60 shadow-lg shadow-yellow-400/10";
+      return "border-warning/40 bg-warning-muted/30 ring-1 ring-warning/20";
     }
-
     if (status === "Completed") {
-      return "border-green-500/50 bg-slate-800";
+      return "border-success/30 bg-success-muted/20";
     }
-
     if (status === "Error") {
-      return "border-red-500/50 bg-slate-800";
+      return "border-error/30 bg-error-muted/20";
     }
-
-    return "border-slate-600 bg-slate-800";
+    return "border-border-subtle bg-surface-1";
   };
 
   return (
-    <div className="mt-6 bg-slate-900 border border-slate-700 rounded-xl p-4 md:p-6">
-      <h2 className="font-bold text-lg md:text-xl mb-4 text-slate-100">
-        AI Company Floor
-      </h2>
+    <Card padding="lg">
+      <CardHeader
+        title="Company Floor"
+        description="Visual map of AI teams and live agent positions"
+      />
 
-      <div className="flex items-start gap-3 md:gap-4">
+      <div className="flex items-start gap-4">
         <MovingRobot
           activeIndex={activeIndex}
           step={STATION_STEP}
-          trackHeight={ROOMS.length * ROOM_HEIGHT + (ROOMS.length - 1) * ROOM_GAP}
+          trackHeight={
+            ROOMS.length * ROOM_HEIGHT + (ROOMS.length - 1) * ROOM_GAP
+          }
           trackClassName="w-8 md:w-10 shrink-0"
-          robotClassName="text-2xl md:text-3xl leading-none drop-shadow-lg"
+          robotClassName="text-2xl md:text-3xl leading-none drop-shadow-[0_0_12px_rgba(139,92,246,0.4)]"
         />
 
         <div className="grid grid-cols-1 gap-4 flex-1 min-w-0">
@@ -77,18 +70,24 @@ export default function CompanyFloor(props: AgentStatusProps) {
                 `}
               >
                 <div className="flex items-center gap-3 md:gap-4 w-full min-w-0">
-                  <span className="text-2xl md:text-3xl shrink-0">
+                  <span
+                    className="flex size-10 items-center justify-center rounded-lg bg-surface-3 text-xl shrink-0"
+                    aria-hidden
+                  >
                     {room.icon}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold text-slate-100 truncate">
+                    <h3 className="text-sm font-medium text-text-primary truncate">
                       {room.title}
                     </h3>
-                    <p
-                      className={`text-sm mt-0.5 ${getStatusClasses(room.agent, status)}`}
-                    >
-                      Status: {status}
-                    </p>
+                    <div className="mt-1">
+                      <Badge
+                        variant={statusToBadgeVariant(status)}
+                        pulse={status === "Working"}
+                      >
+                        {status}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -96,6 +95,6 @@ export default function CompanyFloor(props: AgentStatusProps) {
           })}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

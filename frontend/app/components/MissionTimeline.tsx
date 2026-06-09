@@ -1,6 +1,7 @@
 "use client";
 
 import MovingRobot from "./MovingRobot";
+import Card, { CardHeader } from "./ui/Card";
 import {
   AGENT_NAMES,
   getActiveAgentIndex,
@@ -19,20 +20,33 @@ export default function MissionTimeline(props: AgentStatusProps) {
     const status = statuses[name];
 
     if (status === "Completed") {
-      return "text-green-400 font-semibold";
+      return "text-success font-medium";
     }
 
     if (name === currentAgent || status === "Working") {
-      return "text-yellow-400 font-semibold animate-pulse";
+      return "text-warning font-medium";
     }
 
-    return "text-gray-500";
+    return "text-text-muted";
+  };
+
+  const getDotClasses = (name: string) => {
+    const status = statuses[name];
+
+    if (status === "Completed") return "bg-success ring-success/30";
+    if (name === currentAgent || status === "Working") {
+      return "bg-warning ring-warning/30 animate-pulse";
+    }
+    return "bg-surface-elevated ring-border-default";
   };
 
   return (
-    <div className="mt-4 bg-slate-800 p-4 rounded-lg">
-      <h2 className="font-bold mb-3 text-slate-200">Mission Timeline</h2>
-      <div className="flex items-start gap-3">
+    <Card padding="md">
+      <CardHeader
+        title="Workflow Timeline"
+        description="Agent execution order and current position"
+      />
+      <div className="flex items-start gap-4">
         <MovingRobot
           activeIndex={activeIndex}
           step={STATION_STEP}
@@ -43,17 +57,23 @@ export default function MissionTimeline(props: AgentStatusProps) {
           {AGENT_NAMES.map((name, index) => (
             <div
               key={name}
-              className="flex flex-col items-center justify-start"
+              className="flex items-center gap-3"
               style={{ height: STATION_STEP }}
             >
-              <span className={getAgentClasses(name)}>{name}</span>
+              <span
+                className={`size-2 rounded-full ring-2 shrink-0 ${getDotClasses(name)}`}
+                aria-hidden
+              />
+              <span className={`text-sm ${getAgentClasses(name)}`}>{name}</span>
               {index < AGENT_NAMES.length - 1 && (
-                <span className="text-slate-500 mt-1">↓</span>
+                <span className="ml-auto text-text-muted text-xs hidden sm:inline">
+                  ↓
+                </span>
               )}
             </div>
           ))}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
