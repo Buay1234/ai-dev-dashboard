@@ -5,6 +5,7 @@ import AgentCard from "./components/AgentCard";
 import ResultCard from "./components/ResultCard";
 import DashboardStats from "./components/DashboardStats";
 import ProgressBar from "./components/ProgressBar";
+import MissionTimeline from "./components/MissionTimeline";
 import MissionForm from "./components/MissionForm";
 import HistoryPanel from "./components/HistoryPanel";
 import { useMission } from "@/hooks/use-mission";
@@ -64,6 +65,14 @@ export default function Home() {
         startMission={startMission}
       />
       <ProgressBar progress={progress} currentAgent={currentAgent} />
+      <MissionTimeline
+        currentAgent={currentAgent}
+        robinStatus={robinStatus}
+        zoroStatus={zoroStatus}
+        namiStatus={namiStatus}
+        frankyStatus={frankyStatus}
+        usoppStatus={usoppStatus}
+      />
       <div className="flex gap-3 mt-4">
         <button
           onClick={exportMarkdown}
