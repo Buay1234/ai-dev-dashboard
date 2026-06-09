@@ -1,73 +1,85 @@
 "use client";
 
 import { motion } from "framer-motion";
+import AgentCharacter from "./AgentCharacter";
 import Card from "./ui/Card";
 import Badge, { statusToBadgeVariant } from "./ui/Badge";
+import { AGENT_CONFIG, AGENT_THEME_STYLES } from "@/lib/agents";
+import type { AgentStatus } from "@/lib/types/agent-results";
 
 type Props = {
-  icon: string;
   name: string;
-  role: string;
-  status: string;
+  status: AgentStatus | string;
 };
 
-export default function AgentCard({ icon, name, role, status }: Props) {
-  const isWorking = status === "Working";
-  const isIdle = status === "Idle";
+export default function AgentCard({ name, status }: Props) {
+  const agent = AGENT_CONFIG.find((a) => a.name === name);
+  if (!agent) return null;
 
-  const renderStatus = () => {
-    if (isWorking) {
-      return (
-        <>
-          <motion.span
-            className="inline-block"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            aria-hidden
-          >
-            ⚙️
-          </motion.span>
-          Working...
-        </>
-      );
-    }
-    if (status === "Completed") return "Completed";
-    if (status === "Error") return "Error";
-    return status;
-  };
+  const theme = AGENT_THEME_STYLES[agent.theme];
+  const isWorking = status === "Working";
+  const isCompleted = status === "Completed";
+  const isError = status === "Error";
+
+  const borderStyle = isWorking
+    ? theme.border
+    : isCompleted
+      ? "rgba(34, 197, 94, 0.35)"
+      : isError
+        ? "rgba(239, 68, 68, 0.35)"
+        : undefined;
 
   return (
     <motion.div
-      animate={isIdle ? { y: [0, -4, 0] } : { y: 0 }}
-      transition={
-        isIdle
-          ? { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
-          : { duration: 0.3 }
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.2 }}
+      className="h-full"
+      style={
+        borderStyle
+          ? {
+              borderRadius: "0.75rem",
+              border: `1px solid ${borderStyle}`,
+              boxShadow: isWorking ? `0 0 20px ${theme.glow}` : undefined,
+            }
+          : undefined
       }
     >
-      <Card
-        hover
-        padding="md"
-        className={`
-          h-full
-          ${isWorking ? "border-warning/40 ring-1 ring-warning/20" : ""}
-          ${status === "Completed" ? "border-success/30" : ""}
-          ${status === "Error" ? "border-error/30" : ""}
-        `}
-      >
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <span
-            className="flex size-10 items-center justify-center rounded-lg bg-surface-3 text-xl"
-            aria-hidden
-          >
-            {icon}
-          </span>
+      <Card hover padding="md" className="h-full border-0 shadow-none">
+        <div className="flex flex-col items-center text-center gap-3">
+          <AgentCharacter agent={agent} status={status} size="md" />
+
+          <div>
+            <h3 className="text-sm font-semibold text-text-primary">
+              {agent.name}
+            </h3>
+            <p className="mt-0.5 text-xs text-text-muted">{agent.role}</p>
+          </div>
+
           <Badge variant={statusToBadgeVariant(status)} pulse={isWorking}>
-            {renderStatus()}
+            {isWorking ? (
+              <span className="flex items-center gap-1">
+                <motion.span
+                  animate={{ rotate: 360 }}
+                  transition={{
+                    duration: 1,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                  aria-hidden
+                >
+                  ⚙️
+                </motion.span>
+                Working
+              </span>
+            ) : isCompleted ? (
+              "✓ Completed"
+            ) : isError ? (
+              "✕ Failed"
+            ) : (
+              status
+            )}
           </Badge>
         </div>
-        <h3 className="text-sm font-semibold text-text-primary">{name}</h3>
-        <p className="mt-0.5 text-xs text-text-muted">{role}</p>
       </Card>
     </motion.div>
   );

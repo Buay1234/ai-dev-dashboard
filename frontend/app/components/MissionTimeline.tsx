@@ -1,78 +1,146 @@
 "use client";
 
-import MovingRobot from "./MovingRobot";
+import { motion } from "framer-motion";
 import Card, { CardHeader } from "./ui/Card";
+import AgentCharacter from "./AgentCharacter";
 import {
-  AGENT_NAMES,
-  getActiveAgentIndex,
+  AGENT_CONFIG,
+  AGENT_THEME_STYLES,
+  isMissionActive,
   toAgentStatusMap,
 } from "@/lib/agents";
 import type { AgentStatusProps } from "@/lib/types/agent-results";
 
-const STATION_STEP = 56;
+const STEP = 64;
 
 export default function MissionTimeline(props: AgentStatusProps) {
   const { currentAgent } = props;
   const statuses = toAgentStatusMap(props);
-  const activeIndex = getActiveAgentIndex(currentAgent);
-
-  const getAgentClasses = (name: string) => {
-    const status = statuses[name];
-
-    if (status === "Completed") {
-      return "text-success font-medium";
-    }
-
-    if (name === currentAgent || status === "Working") {
-      return "text-warning font-medium";
-    }
-
-    return "text-text-muted";
-  };
-
-  const getDotClasses = (name: string) => {
-    const status = statuses[name];
-
-    if (status === "Completed") return "bg-success ring-success/30";
-    if (name === currentAgent || status === "Working") {
-      return "bg-warning ring-warning/30 animate-pulse";
-    }
-    return "bg-surface-elevated ring-border-default";
-  };
+  const missionActive = isMissionActive(statuses, currentAgent);
 
   return (
     <Card padding="md">
       <CardHeader
         title="Workflow Timeline"
-        description="Agent execution order and current position"
+        description="Agent execution order and live progress"
       />
-      <div className="flex items-start gap-4">
-        <MovingRobot
-          activeIndex={activeIndex}
-          step={STATION_STEP}
-          trackHeight={AGENT_NAMES.length * STATION_STEP}
-        />
 
-        <div className="flex flex-col flex-1">
-          {AGENT_NAMES.map((name, index) => (
-            <div
-              key={name}
-              className="flex items-center gap-3"
-              style={{ height: STATION_STEP }}
-            >
-              <span
-                className={`size-2 rounded-full ring-2 shrink-0 ${getDotClasses(name)}`}
-                aria-hidden
-              />
-              <span className={`text-sm ${getAgentClasses(name)}`}>{name}</span>
-              {index < AGENT_NAMES.length - 1 && (
-                <span className="ml-auto text-text-muted text-xs hidden sm:inline">
-                  ↓
-                </span>
+      <div className="relative flex flex-col">
+        {AGENT_CONFIG.map((agent, index) => {
+          const status = statuses[agent.name];
+          const theme = AGENT_THEME_STYLES[agent.theme];
+          const isActive =
+            agent.name === currentAgent || status === "Working";
+          const isCompleted = status === "Completed";
+          const isError = status === "Error";
+          const isFuture = status === "Idle" && missionActive;
+
+          return (
+            <div key={agent.name} className="relative">
+              <motion.div
+                className="flex items-center gap-3 rounded-lg px-2 py-2"
+                style={{ minHeight: STEP }}
+                animate={
+                  isActive
+                    ? { backgroundColor: theme.bg }
+                    : { backgroundColor: "transparent" }
+                }
+                transition={{ duration: 0.35 }}
+              >
+                <div className="relative shrink-0">
+                  <AgentCharacter agent={agent} status={status} size="sm" />
+                  {isActive && (
+                    <motion.span
+                      className="absolute -inset-1 rounded-full border-2"
+                      style={{ borderColor: theme.ring }}
+                      animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0, 0.6] }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                      aria-hidden
+                    />
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="text-sm font-medium"
+                    style={{
+                      color: isCompleted
+                        ? "#86efac"
+                        : isError
+                          ? "#fca5a5"
+                          : isActive
+                            ? theme.text
+                            : isFuture
+                              ? "#71717a"
+                              : "#a1a1aa",
+                    }}
+                  >
+                    {agent.name}
+                  </p>
+                  <p className="text-xs text-text-muted truncate">
+                    {agent.role}
+                  </p>
+                </div>
+
+                <motion.span
+                  className="text-xs font-medium shrink-0"
+                  animate={
+                    isActive ? { opacity: [0.5, 1, 0.5] } : { opacity: 1 }
+                  }
+                  transition={
+                    isActive
+                      ? { duration: 1.2, repeat: Infinity }
+                      : { duration: 0.3 }
+                  }
+                  style={{
+                    color: isCompleted
+                      ? "#86efac"
+                      : isError
+                        ? "#fca5a5"
+                        : isActive
+                          ? theme.text
+                          : "#71717a",
+                  }}
+                >
+                  {isCompleted
+                    ? "✓ Done"
+                    : isError
+                      ? "✕ Failed"
+                      : isActive
+                        ? "● Active"
+                        : "○ Waiting"}
+                </motion.span>
+              </motion.div>
+
+              {index < AGENT_CONFIG.length - 1 && (
+                <div className="flex justify-start pl-5 py-0.5" aria-hidden>
+                  <motion.div
+                    className="w-0.5 h-4 rounded-full"
+                    style={{
+                      background: isCompleted
+                        ? "linear-gradient(to bottom, #22c55e, rgba(255,255,255,0.1))"
+                        : "rgba(255,255,255,0.08)",
+                    }}
+                    animate={
+                      isCompleted
+                        ? { opacity: [0.4, 1, 0.4] }
+                        : { opacity: 0.3 }
+                    }
+                    transition={
+                      isCompleted
+                        ? { duration: 1.5, repeat: Infinity }
+                        : { duration: 0.3 }
+                    }
+                  />
+                </div>
               )}
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
     </Card>
   );
