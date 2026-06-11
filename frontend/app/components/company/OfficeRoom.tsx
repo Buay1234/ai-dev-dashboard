@@ -1,104 +1,122 @@
 "use client";
 
+import { memo } from "react";
+import { motion } from "framer-motion";
 import Badge, { statusToBadgeVariant } from "../ui/Badge";
+import AgentCharacter from "./AgentCharacter";
 import type { AgentStatus } from "@/lib/types/agent-results";
+import {
+  THEME_STYLES,
+  STATUS_GLOW_RGB,
+  type OfficeRoomTheme,
+} from "./theme";
 
-export type OfficeRoomTheme = "purple" | "green" | "orange" | "blue" | "yellow";
-
-const THEME_STYLES: Record<
-  OfficeRoomTheme,
-  { border: string; glow: string; iconBg: string; accent: string }
-> = {
-  purple: {
-    border: "border-violet-500/40",
-    glow: "shadow-[0_0_20px_rgba(139,92,246,0.25)]",
-    iconBg: "bg-violet-500/15 text-violet-300",
-    accent: "text-violet-300",
-  },
-  green: {
-    border: "border-emerald-500/40",
-    glow: "shadow-[0_0_20px_rgba(16,185,129,0.2)]",
-    iconBg: "bg-emerald-500/15 text-emerald-300",
-    accent: "text-emerald-300",
-  },
-  orange: {
-    border: "border-orange-500/40",
-    glow: "shadow-[0_0_20px_rgba(249,115,22,0.2)]",
-    iconBg: "bg-orange-500/15 text-orange-300",
-    accent: "text-orange-300",
-  },
-  blue: {
-    border: "border-cyan-500/40",
-    glow: "shadow-[0_0_20px_rgba(6,182,212,0.2)]",
-    iconBg: "bg-cyan-500/15 text-cyan-300",
-    accent: "text-cyan-300",
-  },
-  yellow: {
-    border: "border-amber-500/40",
-    glow: "shadow-[0_0_20px_rgba(245,158,11,0.2)]",
-    iconBg: "bg-amber-500/15 text-amber-300",
-    accent: "text-amber-300",
-  },
-};
-
-const STATUS_GLOW: Record<string, string> = {
-  Working: "shadow-[0_0_24px_rgba(234,179,8,0.35)] border-yellow-500/50",
-  Completed: "shadow-[0_0_24px_rgba(34,197,94,0.35)] border-emerald-500/50",
-  Error: "shadow-[0_0_24px_rgba(239,68,68,0.35)] border-red-500/50",
-};
+export type { OfficeRoomTheme };
 
 export type OfficeRoomProps = {
   icon: string;
   title: string;
+  agentName: string;
+  agentRole: string;
+  agentImage: string;
   status: AgentStatus | string;
   theme?: OfficeRoomTheme;
   isActive?: boolean;
 };
 
-export default function OfficeRoom({
+function OfficeRoom({
   icon,
   title,
+  agentName,
+  agentRole,
+  agentImage,
   status,
   theme = "purple",
   isActive = false,
 }: OfficeRoomProps) {
   const styles = THEME_STYLES[theme];
   const isWorking = status === "Working";
-  const statusGlow = STATUS_GLOW[status] ?? "";
+  const isCompleted = status === "Completed";
+  const isError = status === "Error";
+  const statusRgb = STATUS_GLOW_RGB[status];
 
   return (
-    <article
-      className={`
-        relative overflow-hidden rounded-xl border bg-[#0a0a0f]/90
-        backdrop-blur-sm transition-all duration-300
-        ${styles.border}
-        ${isActive || status !== "Idle" ? styles.glow : ""}
-        ${statusGlow}
-      `}
+    <motion.article
+      className="relative overflow-hidden rounded-xl border bg-[#0a0a0f]/90 backdrop-blur-sm"
+      style={{ borderColor: styles.borderColor }}
+      whileHover={{
+        scale: 1.015,
+        y: -2,
+        borderColor: styles.hoverBorder,
+      }}
+      transition={{ type: "spring", stiffness: 400, damping: 28 }}
+      animate={
+        statusRgb
+          ? {
+              boxShadow: [
+                `0 0 12px ${statusRgb}40`,
+                `0 0 28px ${statusRgb}55`,
+                `0 0 12px ${statusRgb}40`,
+              ],
+            }
+          : isActive
+            ? {
+                boxShadow: [
+                  `0 0 12px ${styles.glowRgb}35`,
+                  `0 0 24px ${styles.glowRgb}50`,
+                  `0 0 12px ${styles.glowRgb}35`,
+                ],
+              }
+            : { boxShadow: "0 0 0 transparent" }
+      }
     >
+      {statusRgb && (
+        <motion.div
+          className="pointer-events-none absolute -inset-1 rounded-2xl"
+          style={{
+            background: `radial-gradient(ellipse at center, ${statusRgb}25, transparent 70%)`,
+          }}
+          animate={{ opacity: [0.4, 0.85, 0.4] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          aria-hidden
+        />
+      )}
+
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.04]"
+        className="pointer-events-none absolute inset-0 opacity-[0.03]"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(0,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,255,0.5) 1px, transparent 1px)",
-          backgroundSize: "16px 16px",
+            "linear-gradient(cyan 1px, transparent 1px), linear-gradient(90deg, cyan 1px, transparent 1px)",
+          backgroundSize: "14px 14px",
         }}
         aria-hidden
       />
 
       {isWorking && (
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-yellow-400/60 to-transparent"
+        <motion.div
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-yellow-400/70 to-transparent"
+          animate={{ opacity: [0.4, 1, 0.4] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
           aria-hidden
         />
       )}
 
-      <div className="relative z-10 flex items-center gap-3 p-4 min-h-[72px]">
-        <div
-          className={`flex size-11 shrink-0 items-center justify-center rounded-lg border border-white/5 text-xl ${styles.iconBg}`}
-          aria-hidden
-        >
-          {icon}
+      <div className="relative z-10 flex items-center gap-3 p-4 min-h-[76px]">
+        <div className="relative">
+          <AgentCharacter
+            name={agentName}
+            image={agentImage}
+            role={agentRole}
+            status={status}
+            isActive={isActive}
+            size="md"
+          />
+          <span
+            className={`absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border border-white/10 text-[10px] ${styles.iconBg}`}
+            aria-hidden
+          >
+            {icon}
+          </span>
         </div>
 
         <div className="min-w-0 flex-1">
@@ -107,15 +125,28 @@ export default function OfficeRoom({
           >
             {title}
           </h3>
-          <p className="mt-0.5 text-[10px] uppercase tracking-widest text-zinc-500 font-mono">
-            Dept. Node
+          <p className="mt-0.5 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
+            {agentName} · {agentRole}
           </p>
         </div>
 
-        <Badge variant={statusToBadgeVariant(status)} pulse={isWorking}>
-          {status}
-        </Badge>
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <Badge variant={statusToBadgeVariant(status)} pulse={isWorking}>
+            {isCompleted ? "✓ Done" : isError ? "✕ Error" : status}
+          </Badge>
+          {isActive && (
+            <motion.span
+              className="text-[9px] font-mono uppercase tracking-wider text-yellow-400/90"
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1.2, repeat: Infinity }}
+            >
+              ● Active
+            </motion.span>
+          )}
+        </div>
       </div>
-    </article>
+    </motion.article>
   );
 }
+
+export default memo(OfficeRoom);
