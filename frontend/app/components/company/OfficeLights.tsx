@@ -19,7 +19,7 @@ function getLightColor(status: string, active: boolean): string {
   if (status === "Completed") return "#4ade80";
   if (status === "Error") return "#f87171";
   if (active) return "#a78bfa";
-  return "rgba(255,255,255,0.15)";
+  return "rgba(255, 255, 255, 0.15)";
 }
 
 function OfficeLights({ lights }: Props) {
@@ -37,19 +37,18 @@ function OfficeLights({ lights }: Props) {
           <motion.div
             key={light.key}
             className="absolute left-0 size-2 rounded-full"
-            style={{ top: light.top }}
-            animate={{
+            style={{
+              top: light.top,
               backgroundColor: color,
-              boxShadow: lit
-                ? [`0 0 6px ${color}`, `0 0 14px ${color}`, `0 0 6px ${color}`]
-                : "0 0 2px rgba(255,255,255,0.1)",
-              opacity: lit ? [0.65, 1, 0.65] : 0.35,
+              boxShadow: lit ? `0 0 10px ${color}` : "0 0 2px rgba(255,255,255,0.1)",
             }}
-            transition={
-              lit
-                ? { duration: 2, repeat: Infinity, ease: "easeInOut" }
-                : { duration: 0.35 }
-            }
+            animate={{ opacity: lit ? [0.65, 1, 0.65] : 0.35 }}
+            transition={{
+              type: "tween",
+              duration: lit ? 2 : 0.35,
+              repeat: lit ? Infinity : 0,
+              ease: "easeInOut",
+            }}
           />
         );
       })}

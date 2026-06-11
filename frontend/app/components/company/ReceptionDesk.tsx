@@ -13,24 +13,31 @@ function ReceptionDesk({ isActive, missionActive }: Props) {
   return (
     <motion.article
       className="relative overflow-hidden rounded-xl border border-violet-500/30 bg-[#0a0a12]/90 backdrop-blur-sm"
-      animate={
+      style={
         isActive
-          ? {
-              boxShadow: [
-                "0 0 16px rgba(139,92,246,0.25)",
-                "0 0 32px rgba(139,92,246,0.4)",
-                "0 0 16px rgba(139,92,246,0.25)",
-              ],
-            }
-          : { boxShadow: "0 0 0 transparent" }
+          ? { boxShadow: "0 0 24px rgba(139,92,246,0.35)" }
+          : undefined
       }
-      transition={
-        isActive
-          ? { duration: 2.2, repeat: Infinity, ease: "easeInOut" }
-          : { duration: 0.3 }
-      }
-      whileHover={{ scale: 1.01, borderColor: "rgba(139,92,246,0.5)" }}
+      whileHover={{
+        scale: 1.01,
+        borderColor: "rgba(139,92,246,0.5)",
+        transition: { type: "tween", duration: 0.25 },
+      }}
     >
+      {isActive && (
+        <motion.div
+          className="pointer-events-none absolute inset-0 rounded-xl"
+          style={{ boxShadow: "inset 0 0 24px rgba(139,92,246,0.15)" }}
+          animate={{ opacity: [0.4, 0.9, 0.4] }}
+          transition={{
+            type: "tween",
+            duration: 2.2,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          aria-hidden
+        />
+      )}
       <div className="relative z-10 flex items-center gap-3 p-4 min-h-[68px]">
         <motion.div
           className="flex size-11 items-center justify-center rounded-lg border border-violet-500/20 bg-violet-500/10 text-xl"

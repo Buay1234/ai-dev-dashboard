@@ -54,6 +54,29 @@ export const STATUS_GLOW_RGB: Record<string, string> = {
   Error: "rgb(239, 68, 68)",
 };
 
+/** V10 map node — status drives card color */
+export const STATUS_NODE_STYLES: Record<
+  string,
+  { card: string; glowRgb: string }
+> = {
+  Idle: {
+    card: "border-zinc-600/50 bg-zinc-900/80",
+    glowRgb: "rgb(161, 161, 170)",
+  },
+  Working: {
+    card: "border-yellow-500/55 bg-yellow-500/10",
+    glowRgb: "rgb(234, 179, 8)",
+  },
+  Completed: {
+    card: "border-emerald-500/50 bg-emerald-500/10",
+    glowRgb: "rgb(34, 197, 94)",
+  },
+  Error: {
+    card: "border-red-500/55 bg-red-500/10",
+    glowRgb: "rgb(239, 68, 68)",
+  },
+};
+
 export type CharacterStatus = keyof typeof STATUS_GLOW_RGB;
 
 export const CHARACTER_STATUS_GLOW: Record<

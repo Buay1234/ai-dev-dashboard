@@ -1,8 +1,4 @@
 "use client";
 
-import CompanyFloor, { type CompanyFloorProps } from "./CompanyFloor";
-
-/** @deprecated Use CompanyFloor for the full simulation */
-export default function OfficeMap(props: CompanyFloorProps) {
-  return <CompanyFloor {...props} />;
-}
+export { default } from "./company/OfficeMap";
+export type { OfficeMapProps } from "./company/OfficeMap";

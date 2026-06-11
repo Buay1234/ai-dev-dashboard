@@ -43,32 +43,20 @@ function OfficeRoom({
   return (
     <motion.article
       className="relative overflow-hidden rounded-xl border bg-[#0a0a0f]/90 backdrop-blur-sm"
-      style={{ borderColor: styles.borderColor }}
+      style={{
+        borderColor: styles.borderColor,
+        boxShadow: statusRgb
+          ? `0 0 20px ${statusRgb}44`
+          : isActive
+            ? `0 0 18px ${styles.glowRgb}40`
+            : undefined,
+      }}
       whileHover={{
         scale: 1.015,
         y: -2,
         borderColor: styles.hoverBorder,
+        transition: { type: "tween", duration: 0.25 },
       }}
-      transition={{ type: "spring", stiffness: 400, damping: 28 }}
-      animate={
-        statusRgb
-          ? {
-              boxShadow: [
-                `0 0 12px ${statusRgb}40`,
-                `0 0 28px ${statusRgb}55`,
-                `0 0 12px ${statusRgb}40`,
-              ],
-            }
-          : isActive
-            ? {
-                boxShadow: [
-                  `0 0 12px ${styles.glowRgb}35`,
-                  `0 0 24px ${styles.glowRgb}50`,
-                  `0 0 12px ${styles.glowRgb}35`,
-                ],
-              }
-            : { boxShadow: "0 0 0 transparent" }
-      }
     >
       {statusRgb && (
         <motion.div
@@ -101,18 +89,19 @@ function OfficeRoom({
         />
       )}
 
-      <div className="relative z-10 flex items-center gap-3 p-4 min-h-[76px]">
-        <div className="relative">
+      <div className="relative z-10 flex items-end gap-3 p-4 min-h-[88px]">
+        <div className="relative shrink-0 pb-0.5">
           <AgentCharacter
             name={agentName}
             image={agentImage}
             role={agentRole}
             status={status}
             isActive={isActive}
+            theme={theme}
             size="md"
           />
           <span
-            className={`absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border border-white/10 text-[10px] ${styles.iconBg}`}
+            className={`absolute top-0 -right-1 flex size-5 items-center justify-center rounded-sm border border-white/10 text-[10px] shadow-md ${styles.iconBg}`}
             aria-hidden
           >
             {icon}

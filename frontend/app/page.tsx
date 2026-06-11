@@ -308,7 +308,7 @@ export default function Home() {
 
             title="Software House Floor"
 
-            description="Live office simulation — watch agents walk between departments"
+            description="2D office floor map — mission pipeline across departments"
 
           />
 
