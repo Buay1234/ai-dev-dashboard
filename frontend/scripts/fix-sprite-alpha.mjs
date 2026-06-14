@@ -13,12 +13,7 @@ const PUBLIC = path.join(__dirname, "..", "public", "agents");
 const AGENTS = ["robin", "zoro", "nami", "franky", "usopp"];
 const WHITE_THRESHOLD = 240;
 
-function keyWhiteToTransparent(
-  data: Buffer,
-  width: number,
-  height: number,
-  channels: number
-) {
+function keyWhiteToTransparent(data, width, height, channels) {
   const out = Buffer.alloc(width * height * 4);
 
   for (let i = 0, j = 0; i < data.length; i += channels, j += 4) {
@@ -40,7 +35,7 @@ function keyWhiteToTransparent(
   return out;
 }
 
-async function fixSheet(agent: string) {
+async function fixSheet(agent) {
   const file = path.join(PUBLIC, agent, `${agent}_sheet.png`);
   if (!fs.existsSync(file)) {
     console.warn(`  skip ${agent}: missing sheet`);
@@ -69,7 +64,9 @@ async function fixSheet(agent: string) {
   fs.renameSync(tmp, file);
 
   const meta = await sharp(file).metadata();
-  console.log(`  ${agent}_sheet.png → ${meta.width}x${meta.height} (${meta.channels}ch)`);
+  console.log(
+    `  ${agent}_sheet.png → ${meta.width}x${meta.height} (${meta.channels}ch)`
+  );
 }
 
 async function main() {
