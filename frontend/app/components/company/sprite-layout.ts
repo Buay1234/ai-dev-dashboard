@@ -4,21 +4,31 @@ export const SPRITE_NATIVE = { width: 301, height: 496 } as const;
 export const SPRITE_ASPECT =
   SPRITE_NATIVE.width / SPRITE_NATIVE.height;
 
-export function spriteBox(displayWidth: number) {
+/** Size box from a target height — preserves aspect ratio */
+export function spriteBoxFromHeight(height: number) {
   return {
-    width: displayWidth,
-    height: Math.round(displayWidth / SPRITE_ASPECT),
+    height,
+    width: Math.round(height * SPRITE_ASPECT),
   };
 }
 
-/** Map overlay walkers — tall enough for head-to-toe, fits room grid cell */
-export const MAP_SPRITE = spriteBox(62);
+/** Pixel map agents — V12.1 placement (48×72 max, aspect preserved) */
+export const PIXEL_AGENT = {
+  width: 48,
+  maxHeight: 72,
+} as const;
 
-/** Room card / roster sprites */
+/** @deprecated use PIXEL_AGENT for pixel simulation */
+export const MAP_SPRITE = {
+  width: PIXEL_AGENT.width,
+  height: PIXEL_AGENT.maxHeight,
+};
+
+/** Room card icons — small strategy-game unit portraits */
 export const CARD_SPRITE = {
-  sm: spriteBox(44),
-  md: spriteBox(56),
+  sm: spriteBoxFromHeight(56),
+  md: spriteBoxFromHeight(72),
 } as const;
 
 export const SPRITE_IMAGE_CLASS =
-  "max-h-full max-w-full object-contain object-center pointer-events-none select-none";
+  "max-h-full max-w-full object-contain object-bottom pointer-events-none select-none";

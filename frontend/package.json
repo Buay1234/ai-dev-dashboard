@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:sprites": "node scripts/build-rpg-sprite-sheets.mjs",
+    "fix:sprite-alpha": "node scripts/fix-sprite-alpha.mjs",
     "start": "next start",
     "lint": "eslint"
   },
@@ -26,6 +28,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
+    "sharp": "^0.35.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

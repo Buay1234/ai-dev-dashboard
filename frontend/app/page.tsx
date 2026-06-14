@@ -308,7 +308,7 @@ export default function Home() {
 
             title="Software House Floor"
 
-            description="2D office floor map — mission pipeline across departments"
+            description="Pixel-art office floor — mission pipeline across departments"
 
           />
 

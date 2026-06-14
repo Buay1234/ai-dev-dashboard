@@ -93,7 +93,6 @@ function OfficeRoom({
         <div className="relative shrink-0 pb-0.5">
           <AgentCharacter
             name={agentName}
-            image={agentImage}
             role={agentRole}
             status={status}
             isActive={isActive}

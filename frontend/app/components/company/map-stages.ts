@@ -15,12 +15,12 @@ export type AgentVisualStatus = "idle" | "walking" | "working" | "completed";
 
 /** Percentage coordinates within the office map canvas */
 export const STAGE_POSITIONS: Record<MissionStage, { x: number; y: number }> = {
-  Reception: { x: 50, y: 14 },
-  Robin: { x: 25, y: 36 },
-  Zoro: { x: 75, y: 36 },
-  Nami: { x: 25, y: 58 },
-  Franky: { x: 75, y: 58 },
-  Usopp: { x: 50, y: 82 },
+  Reception: { x: 50, y: 12 },
+  Robin: { x: 25, y: 41 },
+  Zoro: { x: 75, y: 41 },
+  Nami: { x: 25, y: 63 },
+  Franky: { x: 75, y: 63 },
+  Usopp: { x: 50, y: 86 },
 };
 
 export const MISSION_STAGE_ORDER: MissionStage[] = [

@@ -5,8 +5,11 @@ import { motion } from "framer-motion";
 import Badge, { statusToBadgeVariant } from "../ui/Badge";
 import AgentCharacter from "./AgentCharacter";
 import type { AgentStatus } from "@/lib/types/agent-results";
+import { CARD_SPRITE } from "./sprite-layout";
 import { STATUS_NODE_STYLES, type OfficeRoomTheme } from "./theme";
 import { THEME_STYLES } from "./theme";
+
+const ICON = CARD_SPRITE.md;
 
 export type MapRoomNodeProps = {
   title: string;
@@ -84,39 +87,37 @@ function MapRoomNode({
         />
       )}
 
-      <div className="relative z-10 flex items-center gap-3 p-3 sm:p-4 min-h-[112px]">
-        <div className="relative flex shrink-0 items-center justify-center">
+      <div className="relative z-10 grid grid-cols-[auto_1fr_auto] items-center gap-2.5 p-3 sm:px-4 sm:py-3 min-h-[84px]">
+        <div
+          className="relative flex shrink-0 items-center justify-center"
+          style={{ width: ICON.width, height: ICON.height }}
+          aria-hidden={hideCharacter}
+        >
           {hasCharacter && !hideCharacter ? (
             <AgentCharacter
               name={agentName!}
-              image={image!}
               role={agentRole!}
               status={status}
               isActive={isActive}
               theme={theme}
               size="md"
+              variant="icon"
             />
           ) : hasCharacter && hideCharacter ? (
             <div
-              className="flex flex-col items-center opacity-25"
-              style={{ width: 56, height: 92 }}
+              className="size-full rounded-sm border border-dashed border-zinc-600/25 opacity-20"
               aria-hidden
-            >
-              <div className="size-full rounded-md border border-dashed border-zinc-600/40" />
-            </div>
+            />
           ) : (
-            <div
-              className="flex size-14 items-center justify-center rounded-md border border-violet-500/30 bg-violet-500/10"
-              aria-hidden
-            >
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-violet-300">
+            <div className="flex size-full items-center justify-center rounded-sm border border-violet-500/25 bg-violet-500/10">
+              <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-violet-300">
                 HQ
               </span>
             </div>
           )}
         </div>
 
-        <div className="min-w-0 flex-1 pb-1">
+        <div className="min-w-0">
           <h3
             className={`text-sm font-semibold tracking-wide truncate ${isActive ? themeStyle.accent : "text-zinc-100"}`}
           >
@@ -127,7 +128,7 @@ function MapRoomNode({
           </p>
         </div>
 
-        <div className="flex flex-col items-end gap-1 shrink-0 pb-1">
+        <div className="flex flex-col items-end gap-1 shrink-0">
           <Badge variant={statusToBadgeVariant(status)} pulse={isWorking}>
             {status === "Completed"
               ? "✓ Done"

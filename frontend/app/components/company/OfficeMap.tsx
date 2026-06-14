@@ -3,78 +3,15 @@
 import { memo, useMemo } from "react";
 import { motion } from "framer-motion";
 import OfficeBackground from "./OfficeBackground";
-import MapRoomNode from "./MapRoomNode";
-import MapConnections from "./MapConnections";
-import OfficeAgents from "./OfficeAgents";
+import PixelWorld from "./PixelWorld";
 import { isMissionActive } from "@/lib/agents";
 import type { AgentStatusProps } from "@/lib/types/agent-results";
-import type { OfficeRoomTheme } from "./theme";
-import { getMissionStage } from "./map-stages";
-
-const MAP_ROOMS = [
-  {
-    key: "Robin",
-    title: "Robin Office",
-    image: "/agents/robin.png",
-    role: "Business Analyst",
-    theme: "purple" as OfficeRoomTheme,
-    statusKey: "robinStatus" as const,
-    gridClass: "col-start-1 row-start-2",
-  },
-  {
-    key: "Zoro",
-    title: "Zoro Backend Lab",
-    image: "/agents/zoro.png",
-    role: "Backend Developer",
-    theme: "green" as OfficeRoomTheme,
-    statusKey: "zoroStatus" as const,
-    gridClass: "col-start-2 row-start-2",
-  },
-  {
-    key: "Nami",
-    title: "Nami Frontend Studio",
-    image: "/agents/nami.png",
-    role: "Frontend Developer",
-    theme: "orange" as OfficeRoomTheme,
-    statusKey: "namiStatus" as const,
-    gridClass: "col-start-1 row-start-3",
-  },
-  {
-    key: "Franky",
-    title: "Franky Architecture Room",
-    image: "/agents/franky.png",
-    role: "Full Stack Architect",
-    theme: "blue" as OfficeRoomTheme,
-    statusKey: "frankyStatus" as const,
-    gridClass: "col-start-2 row-start-3",
-  },
-  {
-    key: "Usopp",
-    title: "Usopp QA Center",
-    image: "/agents/usopp.png",
-    role: "QA Tester",
-    theme: "yellow" as OfficeRoomTheme,
-    statusKey: "usoppStatus" as const,
-    gridClass: "col-span-2 row-start-4 max-w-md mx-auto w-full",
-  },
-] as const;
-
-const PIPELINE_PATHS = [
-  { id: "reception-robin", d: "M 50 13 L 25 24" },
-  { id: "robin-zoro", d: "M 25 38 L 75 38" },
-  { id: "zoro-nami", d: "M 75 46 L 25 54" },
-  { id: "nami-franky", d: "M 25 66 L 75 66" },
-  { id: "franky-usopp", d: "M 75 74 L 50 86" },
-] as const;
+import { getMissionStage } from "./office-map-config";
 
 export type OfficeMapProps = AgentStatusProps & {
   progress?: number;
   loading?: boolean;
 };
-
-function isPastIdle(status: string) {
-  return status !== "Idle";
-}
 
 function OfficeMap({
   currentAgent,
@@ -84,14 +21,6 @@ function OfficeMap({
   frankyStatus,
   usoppStatus,
 }: OfficeMapProps) {
-  const statusByKey = {
-    robinStatus,
-    zoroStatus,
-    namiStatus,
-    frankyStatus,
-    usoppStatus,
-  };
-
   const statuses = useMemo(
     () => ({
       Robin: robinStatus,
@@ -104,45 +33,8 @@ function OfficeMap({
   );
 
   const missionActive = isMissionActive(statuses, currentAgent);
-  const atReception = currentAgent === "Idle" || !missionActive;
   const currentStage = getMissionStage(currentAgent);
-
-  const receptionStatus = missionActive
-    ? atReception
-      ? "Working"
-      : "Completed"
-    : "Idle";
-
-  const segments = useMemo(
-    () => [
-      {
-        ...PIPELINE_PATHS[0],
-        active: robinStatus === "Working",
-        completed: isPastIdle(robinStatus),
-      },
-      {
-        ...PIPELINE_PATHS[1],
-        active: zoroStatus === "Working",
-        completed: isPastIdle(zoroStatus),
-      },
-      {
-        ...PIPELINE_PATHS[2],
-        active: namiStatus === "Working",
-        completed: isPastIdle(namiStatus),
-      },
-      {
-        ...PIPELINE_PATHS[3],
-        active: frankyStatus === "Working",
-        completed: isPastIdle(frankyStatus),
-      },
-      {
-        ...PIPELINE_PATHS[4],
-        active: usoppStatus === "Working",
-        completed: usoppStatus === "Completed",
-      },
-    ],
-    [robinStatus, zoroStatus, namiStatus, frankyStatus, usoppStatus]
-  );
+  const missionComplete = currentAgent === "Completed";
 
   return (
     <section
@@ -155,10 +47,10 @@ function OfficeMap({
         <header className="mb-5 flex items-center justify-between gap-3">
           <div>
             <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-cyan-400/80">
-              Visual AI Office · V11
+              Visual AI Office · V13
             </p>
             <h2 className="text-base sm:text-lg font-bold text-zinc-100 tracking-tight">
-              Multi-Agent Walking System
+              Pixel Office Simulation
             </h2>
           </div>
           <motion.span
@@ -167,53 +59,18 @@ function OfficeMap({
             transition={{ duration: 2, repeat: Infinity }}
           >
             <span className="size-1.5 rounded-full bg-cyan-400 animate-pulse" />
-            {missionActive
-              ? `Pipeline · ${currentStage}`
-              : "Crew on standby"}
+            {missionComplete
+              ? "Meeting Room"
+              : missionActive
+                ? `Pipeline · ${currentStage}`
+                : "Crew on standby"}
           </motion.span>
         </header>
 
-        <div className="relative min-h-[500px] sm:min-h-[560px]">
-          <MapConnections segments={segments} />
-
-          <div className="relative z-10 grid grid-cols-2 gap-3 sm:gap-4 auto-rows-fr">
-            <div className="col-span-2 row-start-1 max-w-lg mx-auto w-full">
-              <MapRoomNode
-                title="Reception Desk"
-                status={receptionStatus}
-                theme="purple"
-                isActive={atReception && missionActive}
-                subtitle="Mission briefing · Crew dispatch"
-              />
-            </div>
-
-            {MAP_ROOMS.map((room) => {
-              const status = statusByKey[room.statusKey];
-              const isActive =
-                currentAgent === room.key || status === "Working";
-
-              return (
-                <div key={room.key} className={room.gridClass}>
-                  <MapRoomNode
-                    title={room.title}
-                    image={room.image}
-                    agentName={room.key}
-                    agentRole={room.role}
-                    status={status}
-                    theme={room.theme}
-                    isActive={isActive}
-                    hideCharacter
-                  />
-                </div>
-              );
-            })}
-          </div>
-
-          <OfficeAgents currentAgent={currentAgent} statuses={statuses} />
-        </div>
+        <PixelWorld currentAgent={currentAgent} statuses={statuses} />
 
         <p className="mt-4 text-center text-[10px] font-mono uppercase tracking-widest text-zinc-600">
-          Mission pipeline · Reception → Robin → Zoro → Nami → Franky → Usopp
+          Reception → Robin → Zoro → Nami → Franky → Usopp → Meeting Room
         </p>
       </div>
     </section>

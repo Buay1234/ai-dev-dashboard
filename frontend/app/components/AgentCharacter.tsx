@@ -1,12 +1,16 @@
 "use client";
 
-import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   AGENT_THEME_STYLES,
   type AgentConfig,
 } from "@/lib/agents";
 import type { AgentStatus } from "@/lib/types/agent-results";
+import SpriteAnimator from "./company/SpriteAnimator";
+import {
+  mapAgentStatusToSprite,
+  type SpriteAnimState,
+} from "./company/sprite-anim-state";
 
 export type CharacterMode = "idle" | "walking" | "working";
 
@@ -20,37 +24,20 @@ type Props = {
 };
 
 const SIZE_MAP = {
-  sm: {
-    body: "size-9",
-    px: 36,
-    icon: "text-xs",
-    label: "text-[10px]",
-    badge: "size-4 text-[8px]",
-  },
-  md: {
-    body: "size-12",
-    px: 48,
-    icon: "text-sm",
-    label: "text-xs",
-    badge: "size-5 text-[10px]",
-  },
-  lg: {
-    body: "size-16",
-    px: 64,
-    icon: "text-base",
-    label: "text-sm",
-    badge: "size-5 text-[10px]",
-  },
-  xl: {
-    body: "size-20",
-    px: 80,
-    icon: "text-base",
-    label: "text-sm",
-    badge: "size-6 text-xs",
-  },
+  sm: { px: 36, icon: "text-xs", label: "text-[10px]", badge: "size-4 text-[8px]" },
+  md: { px: 48, icon: "text-sm", label: "text-xs", badge: "size-5 text-[10px]" },
+  lg: { px: 64, icon: "text-base", label: "text-sm", badge: "size-5 text-[10px]" },
+  xl: { px: 80, icon: "text-base", label: "text-sm", badge: "size-6 text-xs" },
 };
 
-const WALK_TRANSITION = { duration: 0.85, ease: [0.4, 0, 0.2, 1] as const };
+function resolveSpriteState(
+  status: AgentStatus | string,
+  mode?: CharacterMode
+): SpriteAnimState {
+  if (mode === "walking") return "walking";
+  if (mode === "working") return "working";
+  return mapAgentStatusToSprite(status);
+}
 
 export default function AgentCharacter({
   agent,
@@ -58,15 +45,14 @@ export default function AgentCharacter({
   mode,
   size = "md",
   showLabel = false,
-  priority = false,
 }: Props) {
   const theme = AGENT_THEME_STYLES[agent.theme];
   const sizes = SIZE_MAP[size];
-  const isWalking = mode === "walking";
-  const isWorking =
-    mode === "working" || (mode === undefined && status === "Working");
-  const isIdle = mode === "idle" || (mode === undefined && status === "Idle");
-  const isCompleted = status === "Completed";
+  const spriteState = resolveSpriteState(status, mode);
+  const isWalking = spriteState === "walking";
+  const isWorking = spriteState === "working";
+  const isIdle = spriteState === "idle";
+  const isCompleted = spriteState === "celebrate";
   const isError = status === "Error";
 
   const glowColor = isCompleted
@@ -90,8 +76,10 @@ export default function AgentCharacter({
   return (
     <div className="flex flex-col items-center gap-1">
       <motion.div
-        className={`relative ${sizes.body} shrink-0 overflow-hidden rounded-full border-2`}
+        className="relative shrink-0 overflow-hidden rounded-lg border-2"
         style={{
+          width: sizes.px,
+          height: sizes.px,
           borderColor,
           backgroundColor: bgColor,
           boxShadow: isWorking
@@ -102,42 +90,17 @@ export default function AgentCharacter({
                 ? `0 0 16px ${glowColor}`
                 : `0 0 8px ${theme.glow}`,
         }}
-        animate={
-          isWalking
-            ? {
-                y: [0, -4, 0, -4, 0],
-                rotate: [-3, 3, -3],
-                scaleX: [1, 1.05, 1, 1.05, 1],
-              }
-            : isWorking
-              ? { y: [0, -5, 0], scale: [1, 1.04, 1], rotate: 0, scaleX: 1 }
-              : isIdle
-                ? { y: [0, -4, 0], scale: 1, rotate: 0, scaleX: 1 }
-                : isError
-                  ? { x: [0, -4, 4, -4, 4, 0], y: 0, rotate: 0, scaleX: 1 }
-                  : { y: 0, scale: 1, x: 0, rotate: 0, scaleX: 1 }
-        }
-        transition={
-          isWalking
-            ? { duration: 0.45, repeat: Infinity, ease: "easeInOut" }
-            : isWorking
-              ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
-              : isIdle
-                ? { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
-                : isError
-                  ? { duration: 0.5, ease: "easeInOut" }
-                  : WALK_TRANSITION
-        }
+        animate={{ y: 0, scale: 1 }}
       >
-        <Image
-          src={agent.image}
-          alt={`${agent.name} — ${agent.role}`}
-          width={sizes.px}
-          height={sizes.px}
-          priority={priority}
-          className="size-full object-cover object-top"
-          draggable={false}
-        />
+        <div className="flex size-full items-end justify-center">
+          <SpriteAnimator
+            agentName={agent.name}
+            state={spriteState}
+            width={sizes.px}
+            maxHeight={sizes.px}
+            alt={`${agent.name} — ${agent.role}`}
+          />
+        </div>
 
         <span
           className={`absolute -top-0.5 -right-0.5 flex items-center justify-center rounded-full bg-surface-2 border border-border-default ${sizes.badge} ${sizes.icon}`}

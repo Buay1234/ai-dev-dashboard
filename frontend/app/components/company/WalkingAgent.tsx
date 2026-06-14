@@ -116,8 +116,8 @@ function WalkingAgent({
       aria-label={`${agentName}${isMoving ? ", walking" : `, ${pose}`}`}
     >
       <motion.div
-        className="relative -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
-        style={{ width: SPRITE_W, marginTop: 0 }}
+        className="relative -translate-x-1/2 -translate-y-[42%] flex flex-col items-center"
+        style={{ width: SPRITE_W }}
         animate={
           isMoving
             ? { y: [0, -6, 0, -6, 0], rotate: [-4, 4, -4] }
@@ -148,10 +148,10 @@ function WalkingAgent({
             height: SPRITE_H,
             borderColor: isCurrent
               ? themeStyle.borderColor
-              : "rgba(255,255,255,0.1)",
+              : "rgba(255,255,255,0.08)",
             boxShadow: isCurrent
-              ? `0 0 14px ${themeStyle.glowRgb}44`
-              : undefined,
+              ? `0 0 20px ${themeStyle.glowRgb}55, inset 0 0 12px ${themeStyle.glowRgb}15`
+              : `0 0 10px ${themeStyle.glowRgb}22`,
           }}
         >
           <AnimatePresence mode="wait">
@@ -169,7 +169,7 @@ function WalkingAgent({
                 width={SPRITE_NATIVE.width}
                 height={SPRITE_NATIVE.height}
                 className={SPRITE_IMAGE_CLASS}
-                style={{ width: "100%", height: "100%" }}
+                style={{ width: "100%", height: "100%", maxHeight: SPRITE_H }}
                 draggable={false}
               />
             </motion.div>

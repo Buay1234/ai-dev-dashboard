@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { memo } from "react";
 import {
   motion,
@@ -8,23 +7,22 @@ import {
   type Transition,
 } from "framer-motion";
 import type { AgentStatus } from "@/lib/types/agent-results";
+import SpriteAnimator from "./SpriteAnimator";
+import { mapAgentStatusToSprite } from "./sprite-anim-state";
 import { CHARACTER_STATUS_GLOW, type CharacterStatus } from "./theme";
 import type { OfficeRoomTheme } from "./theme";
 import { THEME_STYLES } from "./theme";
-import {
-  CARD_SPRITE,
-  SPRITE_IMAGE_CLASS,
-  SPRITE_NATIVE,
-} from "./sprite-layout";
+import { CARD_SPRITE } from "./sprite-layout";
 
 type Props = {
   name: string;
-  image: string;
   role: string;
   status?: AgentStatus | string;
   isActive?: boolean;
   theme?: OfficeRoomTheme;
   size?: "sm" | "md";
+  /** Compact icon for room cards — no platform/shadow extras */
+  variant?: "full" | "icon";
 };
 
 const SPRITE = {
@@ -136,12 +134,12 @@ function resolveStatus(status: string): CharacterStatus {
 
 function AgentCharacter({
   name,
-  image,
   role,
   status = "Idle",
   isActive = false,
   theme = "purple",
   size = "md",
+  variant = "full",
 }: Props) {
   const resolved = resolveStatus(status);
   const glow = CHARACTER_STATUS_GLOW[resolved];
@@ -149,51 +147,65 @@ function AgentCharacter({
   const anim = SPRITE_ANIM[resolved];
   const dims = SPRITE[size];
   const isWorking = resolved === "Working";
+  const isIcon = variant === "icon";
+  const spriteState = mapAgentStatusToSprite(status);
+
+  const idleAnim = isIcon
+    ? { y: [0, -3, 0], scale: [1, 1.02, 1] }
+    : anim.body;
 
   return (
     <div
       className="relative flex flex-col items-center shrink-0"
-      style={{ width: dims.width }}
+      style={{ width: dims.width, height: isIcon ? dims.height : undefined }}
     >
       <div
         className="relative flex items-center justify-center"
         style={{ width: dims.width, height: dims.height }}
       >
-        <motion.div
-          className="pointer-events-none absolute -inset-1 rounded-md opacity-60"
-          style={{
-            background: `radial-gradient(ellipse at bottom, ${glow.ring}, transparent 70%)`,
-          }}
-          animate={{ opacity: isWorking ? [0.35, 0.7, 0.35] : [0.2, 0.45, 0.2] }}
-          transition={TWEEN_LOOP(anim.glowDuration)}
-          aria-hidden
-        />
+        {!isIcon && (
+          <motion.div
+            className="pointer-events-none absolute -inset-1 rounded-md opacity-60"
+            style={{
+              background: `radial-gradient(ellipse at bottom, ${glow.ring}, transparent 70%)`,
+            }}
+            animate={{ opacity: isWorking ? [0.35, 0.7, 0.35] : [0.2, 0.45, 0.2] }}
+            transition={TWEEN_LOOP(anim.glowDuration)}
+            aria-hidden
+          />
+        )}
 
         <motion.div
-          className="absolute inset-0 flex items-center justify-center will-change-transform"
-          style={{ transformOrigin: "center center" }}
-          animate={anim.body}
-          transition={anim.bodyTransition}
+          className="absolute inset-0 flex items-end justify-center will-change-transform"
+          style={{ transformOrigin: "center bottom" }}
+          animate={isIcon ? idleAnim : { y: 0, scale: 1 }}
+          transition={isIcon ? TWEEN_LOOP(2.8) : undefined}
         >
           <div
-            className="relative flex size-full items-center justify-center rounded-md border-2 bg-transparent"
-            style={{
-              borderColor: isActive ? themeStyle.borderColor : "rgba(255,255,255,0.12)",
-              boxShadow: isActive
-                ? `0 0 12px ${themeStyle.glowRgb}33`
-                : undefined,
-            }}
+            className={`relative flex items-end justify-center bg-transparent ${isIcon ? "rounded-sm" : "rounded-md border-2"}`}
+            style={
+              isIcon
+                ? { width: dims.width, height: dims.height }
+                : {
+                    width: dims.width,
+                    height: dims.height,
+                    borderColor: isActive
+                      ? themeStyle.borderColor
+                      : "rgba(255,255,255,0.12)",
+                    boxShadow: isActive
+                      ? `0 0 12px ${themeStyle.glowRgb}33`
+                      : undefined,
+                  }
+            }
           >
-            <Image
-              src={image}
+            <SpriteAnimator
+              agentName={name}
+              state={spriteState}
+              width={dims.width}
+              maxHeight={dims.height}
               alt={`${name} — ${role}`}
-              width={SPRITE_NATIVE.width}
-              height={SPRITE_NATIVE.height}
-              className={SPRITE_IMAGE_CLASS}
-              style={{ width: "100%", height: "100%" }}
-              draggable={false}
             />
-            {isWorking && (
+            {!isIcon && isWorking && (
               <motion.div
                 className="absolute bottom-0 left-1/2 flex gap-0.5 -translate-x-1/2"
                 animate={{ opacity: [0, 0.8, 0], y: [0, 2, 0] }}
@@ -206,7 +218,7 @@ function AgentCharacter({
           </div>
         </motion.div>
 
-        {resolved === "Completed" && (
+        {resolved === "Completed" && !isIcon && (
           <motion.span
             className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-sm bg-emerald-500 text-[9px] font-bold text-white z-10 border border-emerald-300/50"
             animate={{ y: [0, -3, 0], scale: [1, 1.1, 1] }}
@@ -217,7 +229,7 @@ function AgentCharacter({
           </motion.span>
         )}
 
-        {resolved === "Error" && (
+        {resolved === "Error" && !isIcon && (
           <motion.span
             className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-sm bg-red-500 text-[9px] font-bold text-white z-10"
             animate={{ x: [0, -2, 2, 0] }}
@@ -229,25 +241,27 @@ function AgentCharacter({
         )}
       </div>
 
-      {/* Platform ledge — character stands on this */}
-      <div
-        className="relative mt-0.5 w-full rounded-sm border border-t"
-        style={{
-          height: 4,
-          borderColor: `${themeStyle.glowRgb}44`,
-          background: `linear-gradient(to bottom, ${themeStyle.glowRgb}30, ${themeStyle.glowRgb}08)`,
-        }}
-        aria-hidden
-      />
+      {!isIcon && (
+        <>
+          <div
+            className="relative mt-0.5 w-full rounded-sm border border-t"
+            style={{
+              height: 4,
+              borderColor: `${themeStyle.glowRgb}44`,
+              background: `linear-gradient(to bottom, ${themeStyle.glowRgb}30, ${themeStyle.glowRgb}08)`,
+            }}
+            aria-hidden
+          />
 
-      {/* Ground shadow — shrinks when sprite floats up */}
-      <motion.div
-        className="rounded-full bg-black/60 blur-[3px] -mt-0.5"
-        style={{ width: dims.width * 0.72, height: 6 }}
-        animate={anim.shadow}
-        transition={anim.shadowTransition}
-        aria-hidden
-      />
+          <motion.div
+            className="rounded-full bg-black/60 blur-[3px] -mt-0.5"
+            style={{ width: dims.width * 0.72, height: 6 }}
+            animate={anim.shadow}
+            transition={anim.shadowTransition}
+            aria-hidden
+          />
+        </>
+      )}
     </div>
   );
 }
