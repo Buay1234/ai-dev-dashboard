@@ -5,14 +5,11 @@ import { motion } from "framer-motion";
 import OfficeBackground from "./OfficeBackground";
 import MapRoomNode from "./MapRoomNode";
 import MapConnections from "./MapConnections";
-import WalkingAgent from "./WalkingAgent";
+import OfficeAgents from "./OfficeAgents";
 import { isMissionActive } from "@/lib/agents";
 import type { AgentStatusProps } from "@/lib/types/agent-results";
 import type { OfficeRoomTheme } from "./theme";
-import {
-  getMissionStage,
-  getWalkingAgentConfig,
-} from "./map-stages";
+import { getMissionStage } from "./map-stages";
 
 const MAP_ROOMS = [
   {
@@ -109,14 +106,6 @@ function OfficeMap({
   const missionActive = isMissionActive(statuses, currentAgent);
   const atReception = currentAgent === "Idle" || !missionActive;
   const currentStage = getMissionStage(currentAgent);
-  const walkingAgent = getWalkingAgentConfig(currentAgent);
-
-  const walkingAgentStatus = useMemo(() => {
-    if (currentAgent === "Completed") return usoppStatus;
-    const room = MAP_ROOMS.find((r) => r.key === currentAgent);
-    if (!room) return "Idle";
-    return statusByKey[room.statusKey];
-  }, [currentAgent, statusByKey, usoppStatus]);
 
   const receptionStatus = missionActive
     ? atReception
@@ -169,7 +158,7 @@ function OfficeMap({
               Visual AI Office · V11
             </p>
             <h2 className="text-base sm:text-lg font-bold text-zinc-100 tracking-tight">
-              Walking Agent Map
+              Multi-Agent Walking System
             </h2>
           </div>
           <motion.span
@@ -178,11 +167,13 @@ function OfficeMap({
             transition={{ duration: 2, repeat: Infinity }}
           >
             <span className="size-1.5 rounded-full bg-cyan-400 animate-pulse" />
-            {walkingAgent ? `${walkingAgent.name} en route` : "Floor Plan"}
+            {missionActive
+              ? `Pipeline · ${currentStage}`
+              : "Crew on standby"}
           </motion.span>
         </header>
 
-        <div className="relative min-h-[460px] sm:min-h-[520px]">
+        <div className="relative min-h-[500px] sm:min-h-[560px]">
           <MapConnections segments={segments} />
 
           <div className="relative z-10 grid grid-cols-2 gap-3 sm:gap-4 auto-rows-fr">
@@ -200,8 +191,6 @@ function OfficeMap({
               const status = statusByKey[room.statusKey];
               const isActive =
                 currentAgent === room.key || status === "Working";
-              const hideCharacter =
-                walkingAgent !== null && currentStage === room.key;
 
               return (
                 <div key={room.key} className={room.gridClass}>
@@ -213,22 +202,14 @@ function OfficeMap({
                     status={status}
                     theme={room.theme}
                     isActive={isActive}
-                    hideCharacter={hideCharacter}
+                    hideCharacter
                   />
                 </div>
               );
             })}
           </div>
 
-          {walkingAgent && (
-            <WalkingAgent
-              currentStage={currentStage}
-              currentAgent={currentAgent}
-              agent={walkingAgent}
-              status={walkingAgentStatus}
-              isActive
-            />
-          )}
+          <OfficeAgents currentAgent={currentAgent} statuses={statuses} />
         </div>
 
         <p className="mt-4 text-center text-[10px] font-mono uppercase tracking-widest text-zinc-600">

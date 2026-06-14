@@ -1,122 +1,210 @@
 "use client";
 
+import Image from "next/image";
 import { memo, useEffect, useRef, useState } from "react";
-import { motion, type Transition } from "framer-motion";
-import AgentCharacter from "./AgentCharacter";
+import { AnimatePresence, motion, type Transition } from "framer-motion";
 import type { AgentStatus } from "@/lib/types/agent-results";
-import type { AgentConfig } from "@/lib/agents";
 import {
   STAGE_POSITIONS,
-  type MissionStage,
+  getAgentSpritePath,
+  getAgentVisualStatus,
+  getHomeStage,
+  getPreviousStage,
+  poseFromVisualStatus,
 } from "./map-stages";
-import type { OfficeRoomTheme } from "./theme";
+import {
+  MAP_SPRITE,
+  SPRITE_IMAGE_CLASS,
+  SPRITE_NATIVE,
+} from "./sprite-layout";
+import { THEME_STYLES, type OfficeRoomTheme } from "./theme";
 
 export type WalkingAgentProps = {
-  currentStage: MissionStage;
+  agentName: string;
+  agentStatus: AgentStatus | string;
   currentAgent: string;
-  agent: AgentConfig;
-  status: AgentStatus | string;
-  isActive?: boolean;
+  theme?: OfficeRoomTheme;
+  isCurrent?: boolean;
 };
+
+const { width: SPRITE_W, height: SPRITE_H } = MAP_SPRITE;
 
 const MOVE_TRANSITION: Transition = {
   type: "spring",
-  stiffness: 90,
-  damping: 18,
-  mass: 0.85,
+  stiffness: 82,
+  damping: 16,
+  mass: 0.88,
 };
 
 const WALK_LOOP: Transition = {
   type: "tween",
-  duration: 0.36,
+  duration: 0.34,
+  repeat: Infinity,
+  ease: "easeInOut",
+};
+
+const IDLE_LOOP: Transition = {
+  type: "tween",
+  duration: 2.6,
   repeat: Infinity,
   ease: "easeInOut",
 };
 
 function WalkingAgent({
-  currentStage,
+  agentName,
+  agentStatus,
   currentAgent,
-  agent,
-  status,
-  isActive = true,
+  theme = "purple",
+  isCurrent = false,
 }: WalkingAgentProps) {
-  const position = STAGE_POSITIONS[currentStage];
-  const prevStage = useRef(currentStage);
-  const [isMoving, setIsMoving] = useState(currentStage !== "Reception");
-  const enterFromReception = useRef(currentStage !== "Reception");
+  const homeStage = getHomeStage(agentName);
+  const homePos = STAGE_POSITIONS[homeStage];
+  const walkFromPos = STAGE_POSITIONS[getPreviousStage(agentName)];
+  const themeStyle = THEME_STYLES[theme];
+
+  const shouldWalk =
+    currentAgent === agentName && agentStatus === "Working";
+
+  const [walkGen, setWalkGen] = useState(0);
+  const [isMoving, setIsMoving] = useState(false);
+  const prevShouldWalk = useRef(false);
 
   useEffect(() => {
-    if (prevStage.current !== currentStage) {
+    if (shouldWalk && !prevShouldWalk.current) {
+      setWalkGen((g) => g + 1);
       setIsMoving(true);
-      prevStage.current = currentStage;
     }
-  }, [currentStage]);
+    if (agentStatus === "Idle" && currentAgent === "Idle") {
+      setWalkGen(0);
+      setIsMoving(false);
+    }
+    prevShouldWalk.current = shouldWalk;
+  }, [shouldWalk, agentStatus, currentAgent]);
 
-  const initialPosition = enterFromReception.current
-    ? STAGE_POSITIONS.Reception
-    : undefined;
+  const visualStatus = getAgentVisualStatus(
+    agentName,
+    agentStatus,
+    currentAgent
+  );
+  const resolvedVisual =
+    shouldWalk && !isMoving ? "working" : visualStatus;
+  const pose = poseFromVisualStatus(resolvedVisual, isMoving);
+  const spriteSrc = getAgentSpritePath(agentName, pose);
 
-  const displayStatus = isMoving ? "Working" : status;
-  const theme = agent.theme as OfficeRoomTheme;
+  const startPos = walkGen > 0 && isMoving ? walkFromPos : homePos;
 
   return (
     <motion.div
-      className="absolute z-20 pointer-events-none"
-      initial={
-        initialPosition
-          ? {
-              left: `${initialPosition.x}%`,
-              top: `${initialPosition.y}%`,
-            }
-          : false
-      }
+      key={`${agentName}-${walkGen}`}
+      className="absolute pointer-events-none"
+      style={{
+        zIndex: isCurrent ? 30 : isMoving ? 28 : 20,
+        willChange: "left, top",
+      }}
+      initial={{
+        left: `${startPos.x}%`,
+        top: `${startPos.y}%`,
+      }}
       animate={{
-        left: `${position.x}%`,
-        top: `${position.y}%`,
+        left: `${homePos.x}%`,
+        top: `${homePos.y}%`,
       }}
-      transition={MOVE_TRANSITION}
+      transition={isMoving ? MOVE_TRANSITION : { type: "tween", duration: 0.15 }}
       onAnimationComplete={() => {
-        enterFromReception.current = false;
-        setIsMoving(false);
+        if (isMoving) setIsMoving(false);
       }}
-      style={{ willChange: "left, top" }}
-      aria-label={`Walking agent ${currentAgent} at ${currentStage}`}
+      aria-label={`${agentName}${isMoving ? ", walking" : `, ${pose}`}`}
     >
       <motion.div
-        className="relative -translate-x-1/2"
-        style={{ marginTop: -4 }}
+        className="relative -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
+        style={{ width: SPRITE_W, marginTop: 0 }}
         animate={
           isMoving
-            ? {
-                y: [0, -6, 0, -6, 0],
-                rotate: [-5, 5, -5],
-              }
-            : { y: 0, rotate: 0 }
+            ? { y: [0, -6, 0, -6, 0], rotate: [-4, 4, -4] }
+            : pose === "wave"
+              ? { y: [0, -4, 0], rotate: [0, 3, 0, -3, 0] }
+              : { y: [0, -4, 0], scale: [1, 1.03, 1] }
         }
-        transition={isMoving ? WALK_LOOP : { type: "tween", duration: 0.25 }}
+        transition={isMoving ? WALK_LOOP : IDLE_LOOP}
       >
-        {isMoving && (
-          <motion.div
-            className="absolute left-1/2 bottom-0 -translate-x-1/2 rounded-full bg-black/50 blur-[4px]"
-            style={{ width: 40, height: 8 }}
-            animate={{
-              scaleX: [1, 0.7, 1, 0.7, 1],
-              opacity: [0.45, 0.25, 0.45, 0.25, 0.45],
+        {isCurrent && (
+          <motion.span
+            className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[8px] font-mono uppercase tracking-wider text-yellow-300"
+            style={{
+              borderColor: `${themeStyle.glowRgb}66`,
+              background: `${themeStyle.glowRgb}22`,
             }}
-            transition={WALK_LOOP}
-            aria-hidden
-          />
+            animate={{ opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 1.2, repeat: Infinity }}
+          >
+            Active
+          </motion.span>
         )}
 
-        <AgentCharacter
-          name={agent.name}
-          image={agent.image}
-          role={agent.role}
-          status={displayStatus}
-          isActive={isActive}
-          theme={theme}
-          size="md"
+        <div
+          className="relative flex items-center justify-center rounded-md border bg-transparent"
+          style={{
+            width: SPRITE_W,
+            height: SPRITE_H,
+            borderColor: isCurrent
+              ? themeStyle.borderColor
+              : "rgba(255,255,255,0.1)",
+            boxShadow: isCurrent
+              ? `0 0 14px ${themeStyle.glowRgb}44`
+              : undefined,
+          }}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={spriteSrc}
+              className="flex size-full items-center justify-center"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ type: "tween", duration: 0.12 }}
+            >
+              <Image
+                src={spriteSrc}
+                alt={`${agentName} — ${pose}`}
+                width={SPRITE_NATIVE.width}
+                height={SPRITE_NATIVE.height}
+                className={SPRITE_IMAGE_CLASS}
+                style={{ width: "100%", height: "100%" }}
+                draggable={false}
+              />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        <div
+          className="mt-0.5 h-0.5 w-3/4 rounded-sm"
+          style={{
+            background: `linear-gradient(to bottom, ${themeStyle.glowRgb}40, transparent)`,
+          }}
+          aria-hidden
         />
+
+        <motion.div
+          className="rounded-full bg-black/55 blur-[3px] -mt-0.5"
+          style={{ width: SPRITE_W * 0.65, height: 5 }}
+          animate={
+            isMoving
+              ? {
+                  scaleX: [1, 0.65, 1, 0.65, 1],
+                  opacity: [0.45, 0.22, 0.45, 0.22, 0.45],
+                }
+              : {
+                  scaleX: [1, 0.88, 1],
+                  opacity: [0.32, 0.24, 0.32],
+                }
+          }
+          transition={isMoving ? WALK_LOOP : IDLE_LOOP}
+          aria-hidden
+        />
+
+        <span className="mt-0.5 text-[8px] font-mono uppercase tracking-wider text-zinc-500">
+          {agentName}
+        </span>
       </motion.div>
     </motion.div>
   );

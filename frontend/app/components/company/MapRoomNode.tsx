@@ -84,8 +84,8 @@ function MapRoomNode({
         />
       )}
 
-      <div className="relative z-10 flex items-end gap-3 p-3 sm:p-4 min-h-[88px]">
-        <div className="relative shrink-0 pb-0.5">
+      <div className="relative z-10 flex items-center gap-3 p-3 sm:p-4 min-h-[112px]">
+        <div className="relative flex shrink-0 items-center justify-center">
           {hasCharacter && !hideCharacter ? (
             <AgentCharacter
               name={agentName!}
@@ -98,16 +98,15 @@ function MapRoomNode({
             />
           ) : hasCharacter && hideCharacter ? (
             <div
-              className="flex flex-col items-center opacity-30"
-              style={{ width: 52 }}
+              className="flex flex-col items-center opacity-25"
+              style={{ width: 56, height: 92 }}
               aria-hidden
             >
-              <div className="h-[68px] w-full rounded-md border border-dashed border-zinc-600/40 bg-zinc-900/40" />
-              <div className="mt-0.5 h-1 w-full rounded-sm bg-zinc-700/30" />
+              <div className="size-full rounded-md border border-dashed border-zinc-600/40" />
             </div>
           ) : (
             <div
-              className="flex size-[52px] items-center justify-center rounded-md border border-violet-500/30 bg-violet-500/10"
+              className="flex size-14 items-center justify-center rounded-md border border-violet-500/30 bg-violet-500/10"
               aria-hidden
             >
               <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-violet-300">

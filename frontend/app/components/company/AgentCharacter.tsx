@@ -11,6 +11,11 @@ import type { AgentStatus } from "@/lib/types/agent-results";
 import { CHARACTER_STATUS_GLOW, type CharacterStatus } from "./theme";
 import type { OfficeRoomTheme } from "./theme";
 import { THEME_STYLES } from "./theme";
+import {
+  CARD_SPRITE,
+  SPRITE_IMAGE_CLASS,
+  SPRITE_NATIVE,
+} from "./sprite-layout";
 
 type Props = {
   name: string;
@@ -23,8 +28,8 @@ type Props = {
 };
 
 const SPRITE = {
-  sm: { w: 40, h: 52, img: 40 },
-  md: { w: 52, h: 68, img: 52 },
+  sm: CARD_SPRITE.sm,
+  md: CARD_SPRITE.md,
 } as const;
 
 const TWEEN_LOOP = (duration: number): Transition => ({
@@ -148,10 +153,12 @@ function AgentCharacter({
   return (
     <div
       className="relative flex flex-col items-center shrink-0"
-      style={{ width: dims.w }}
+      style={{ width: dims.width }}
     >
-      {/* Sprite stage — RPG character frame */}
-      <div className="relative" style={{ width: dims.w, height: dims.h }}>
+      <div
+        className="relative flex items-center justify-center"
+        style={{ width: dims.width, height: dims.height }}
+      >
         <motion.div
           className="pointer-events-none absolute -inset-1 rounded-md opacity-60"
           style={{
@@ -163,32 +170,27 @@ function AgentCharacter({
         />
 
         <motion.div
-          className="absolute inset-x-0 bottom-0 will-change-transform"
-          style={{ transformOrigin: "center bottom", height: dims.h }}
+          className="absolute inset-0 flex items-center justify-center will-change-transform"
+          style={{ transformOrigin: "center center" }}
           animate={anim.body}
           transition={anim.bodyTransition}
         >
           <div
-            className="relative h-full overflow-hidden rounded-md border-2 bg-[#0d0d14]"
+            className="relative flex size-full items-center justify-center rounded-md border-2 bg-transparent"
             style={{
               borderColor: isActive ? themeStyle.borderColor : "rgba(255,255,255,0.12)",
-              boxShadow: `inset 0 -8px 16px rgba(0,0,0,0.5), 0 0 12px ${themeStyle.glowRgb}22`,
+              boxShadow: isActive
+                ? `0 0 12px ${themeStyle.glowRgb}33`
+                : undefined,
             }}
           >
-            <div
-              className="absolute inset-x-0 bottom-0 h-1/3 pointer-events-none"
-              style={{
-                background: `linear-gradient(to top, ${themeStyle.glowRgb}18, transparent)`,
-              }}
-              aria-hidden
-            />
             <Image
               src={image}
               alt={`${name} — ${role}`}
-              width={dims.img}
-              height={dims.h}
-              className="size-full object-cover object-bottom pointer-events-none select-none"
-              style={{ imageRendering: "auto" }}
+              width={SPRITE_NATIVE.width}
+              height={SPRITE_NATIVE.height}
+              className={SPRITE_IMAGE_CLASS}
+              style={{ width: "100%", height: "100%" }}
               draggable={false}
             />
             {isWorking && (
@@ -241,7 +243,7 @@ function AgentCharacter({
       {/* Ground shadow — shrinks when sprite floats up */}
       <motion.div
         className="rounded-full bg-black/60 blur-[3px] -mt-0.5"
-        style={{ width: dims.w * 0.75, height: 6 }}
+        style={{ width: dims.width * 0.72, height: 6 }}
         animate={anim.shadow}
         transition={anim.shadowTransition}
         aria-hidden
