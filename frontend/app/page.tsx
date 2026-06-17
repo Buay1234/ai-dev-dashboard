@@ -2,6 +2,7 @@
 
 
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 
 import ActivityLog from "./components/ActivityLog";
@@ -33,6 +34,7 @@ import EmptyState from "./components/ui/EmptyState";
 import SectionHeader from "./components/ui/SectionHeader";
 
 import { useMission } from "@/hooks/use-mission";
+import { indexLatestMessages } from "@/lib/conversation";
 
 import { extractFiles } from "@/lib/extract-files";
 
@@ -86,11 +88,18 @@ export default function Home() {
 
     logs,
 
+    messages,
+
     history,
 
     startMission,
 
   } = useMission();
+
+  const latestMessages = useMemo(
+    () => indexLatestMessages(messages),
+    [messages]
+  );
 
 
 
@@ -240,7 +249,7 @@ export default function Home() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-              <MissionTimeline {...agentStatusProps} />
+              <MissionTimeline {...agentStatusProps} messages={messages} />
 
               <Card padding="md">
 
@@ -308,7 +317,7 @@ export default function Home() {
 
             title="Software House Floor"
 
-            description="Pixel-art office floor — mission pipeline across departments"
+            description="Live agent conversations on the pixel-art office floor"
 
           />
 
@@ -320,15 +329,19 @@ export default function Home() {
                 {...agentStatusProps}
                 progress={progress}
                 loading={loading}
+                latestMessages={latestMessages}
               />
 
-              <AgentRoster {...agentStatusProps} />
+              <AgentRoster
+                {...agentStatusProps}
+                latestMessages={latestMessages}
+              />
 
             </div>
 
             <div className="space-y-6">
 
-              <ActivityLog logs={logs} />
+              <ActivityLog logs={logs} messages={messages} />
 
             </div>
 

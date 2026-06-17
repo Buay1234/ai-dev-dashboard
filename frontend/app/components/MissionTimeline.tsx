@@ -10,10 +10,16 @@ import {
   toAgentStatusMap,
 } from "@/lib/agents";
 import type { AgentStatusProps } from "@/lib/types/agent-results";
+import type { AgentMessage } from "@/app/types/conversation";
+import { getLatestAgentMessage } from "@/lib/conversation";
 
 const STEP = 64;
 
-export default function MissionTimeline(props: AgentStatusProps) {
+type Props = AgentStatusProps & {
+  messages?: AgentMessage[];
+};
+
+export default function MissionTimeline({ messages = [], ...props }: Props) {
   const { currentAgent } = props;
   const statuses = toAgentStatusMap(props);
   const missionActive = isMissionActive(statuses, currentAgent);
@@ -22,7 +28,7 @@ export default function MissionTimeline(props: AgentStatusProps) {
     <Card padding="md">
       <CardHeader
         title="Workflow Timeline"
-        description="Agent execution order and live progress"
+        description="Agent dialogue and live mission progress · V19"
       />
 
       <div className="relative flex flex-col">
@@ -34,6 +40,7 @@ export default function MissionTimeline(props: AgentStatusProps) {
           const isCompleted = status === "Completed";
           const isError = status === "Error";
           const isFuture = status === "Idle" && missionActive;
+          const dialogue = getLatestAgentMessage(messages, agent.name);
 
           return (
             <div key={agent.name} className="relative">
@@ -48,7 +55,12 @@ export default function MissionTimeline(props: AgentStatusProps) {
                 transition={{ duration: 0.35 }}
               >
                 <div className="relative shrink-0">
-                  <AgentCharacter agent={agent} status={status} size="sm" />
+                  <AgentCharacter
+                    agent={agent}
+                    status={status}
+                    size="sm"
+                    latestMessage={dialogue}
+                  />
                   {isActive && (
                     <motion.span
                       className="absolute -inset-1 rounded-full border-2"
@@ -84,6 +96,11 @@ export default function MissionTimeline(props: AgentStatusProps) {
                   <p className="text-xs text-text-muted truncate">
                     {agent.role}
                   </p>
+                  {dialogue && (
+                    <p className="mt-1 text-[10px] text-cyan-400/90 line-clamp-2 italic">
+                      &ldquo;{dialogue}&rdquo;
+                    </p>
+                  )}
                 </div>
 
                 <motion.span

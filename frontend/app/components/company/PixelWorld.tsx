@@ -24,9 +24,10 @@ const AGENT_THEMES: Record<string, OfficeRoomTheme> = {
 type Props = {
   currentAgent: string;
   statuses: Record<(typeof AGENT_NAMES)[number], AgentStatus | string>;
+  latestMessages?: Record<string, string>;
 };
 
-function PixelWorld({ currentAgent, statuses }: Props) {
+function PixelWorld({ currentAgent, statuses, latestMessages = {} }: Props) {
   const intents = useMemo(
     () =>
       AGENT_NAMES.map((name, index) => ({
@@ -98,6 +99,7 @@ function PixelWorld({ currentAgent, statuses }: Props) {
               intent={intent}
               isCurrent={currentAgent === name}
               theme={AGENT_THEMES[name]}
+              latestMessage={latestMessages[name]}
             />
           ))}
         </div>

@@ -1,42 +1,41 @@
 import Card, { CardHeader } from "./ui/Card";
-import EmptyState from "./ui/EmptyState";
+import LiveConversation from "./LiveConversation";
+import type { AgentMessage } from "@/app/types/conversation";
 
 type Props = {
   logs: string[];
+  messages: AgentMessage[];
 };
 
-export default function ActivityLog({ logs }: Props) {
+export default function ActivityLog({ logs, messages }: Props) {
   return (
     <Card padding="md">
       <CardHeader
         title="Activity Log"
-        description="Real-time events from the mission pipeline"
+        description="Live AI conversation · V19"
       />
       <div
-        className="max-h-64 overflow-y-auto rounded-lg border border-border-subtle bg-surface-1"
+        className="max-h-80 overflow-y-auto rounded-lg border border-border-subtle bg-surface-1"
         role="log"
         aria-live="polite"
         aria-relevant="additions"
       >
-        {logs.length === 0 ? (
-          <EmptyState
-            icon="📜"
-            title="No activity yet"
-            description="Logs will appear here when you start a mission."
-          />
-        ) : (
-          <ul className="divide-y divide-border-subtle">
-            {logs.map((log, index) => (
-              <li
-                key={index}
-                className="px-4 py-2.5 text-xs font-mono text-text-secondary hover:bg-surface-2 transition-colors"
-              >
+        <LiveConversation messages={messages} />
+      </div>
+      {logs.length > 0 && (
+        <details className="mt-3 text-xs text-text-muted">
+          <summary className="cursor-pointer font-mono uppercase tracking-wider text-cyan-500/70">
+            Pipeline events ({logs.length})
+          </summary>
+          <ul className="mt-2 max-h-32 overflow-y-auto divide-y divide-border-subtle rounded border border-border-subtle">
+            {logs.slice(0, 15).map((log, index) => (
+              <li key={index} className="px-3 py-1.5 font-mono text-text-secondary">
                 {log}
               </li>
             ))}
           </ul>
-        )}
-      </div>
+        </details>
+      )}
     </Card>
   );
 }

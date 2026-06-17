@@ -11,6 +11,7 @@ import { getMissionStage } from "./office-map-config";
 export type OfficeMapProps = AgentStatusProps & {
   progress?: number;
   loading?: boolean;
+  latestMessages?: Record<string, string>;
 };
 
 function OfficeMap({
@@ -20,6 +21,7 @@ function OfficeMap({
   namiStatus,
   frankyStatus,
   usoppStatus,
+  latestMessages = {},
 }: OfficeMapProps) {
   const statuses = useMemo(
     () => ({
@@ -47,10 +49,10 @@ function OfficeMap({
         <header className="mb-5 flex items-center justify-between gap-3">
           <div>
             <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-cyan-400/80">
-              Visual AI Office · V13
+              Visual AI Office · V19
             </p>
             <h2 className="text-base sm:text-lg font-bold text-zinc-100 tracking-tight">
-              Pixel Office Simulation
+              Live AI Conversation
             </h2>
           </div>
           <motion.span
@@ -67,7 +69,11 @@ function OfficeMap({
           </motion.span>
         </header>
 
-        <PixelWorld currentAgent={currentAgent} statuses={statuses} />
+        <PixelWorld
+          currentAgent={currentAgent}
+          statuses={statuses}
+          latestMessages={latestMessages}
+        />
 
         <p className="mt-4 text-center text-[10px] font-mono uppercase tracking-widest text-zinc-600">
           Reception → Robin → Zoro → Nami → Franky → Usopp → Meeting Room

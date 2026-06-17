@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import type { AgentMessage } from "@/app/types/conversation";
+import { createAgentMessage } from "@/lib/conversation";
 import type { AgentStatus } from "@/lib/types/agent-results";
 
 export function useMission() {
@@ -22,10 +24,20 @@ export function useMission() {
   const [usoppResult, setUsoppResult] = useState("");
   const [logs, setLogs] = useState<string[]>([]);
   const [history, setHistory] = useState<string[]>([]);
+  const [messages, setMessages] = useState<AgentMessage[]>([]);
 
   const addLog = useCallback((message: string) => {
     setLogs((prev) => [
       `${new Date().toLocaleTimeString()} - ${message}`,
+      ...prev,
+    ]);
+  }, []);
+
+  const addMessage = useCallback((agent: string, message: string) => {
+    const entry = createAgentMessage(agent, message);
+    setMessages((prev) => [...prev, entry]);
+    setLogs((prev) => [
+      `${entry.timestamp} - ${agent}: ${message}`,
       ...prev,
     ]);
   }, []);
@@ -39,6 +51,7 @@ export function useMission() {
     try {
       setLoading(true);
       setProgress(0);
+      setMessages([]);
       setRobinResult("");
       setZoroResult("");
       setNamiResult("");
@@ -56,7 +69,9 @@ export function useMission() {
         ...prev,
       ]);
 
+      addMessage("Robin", "Analyzing requirements...");
       addLog("Robin Started");
+
       const robinResponse = await fetch("/api/robin", {
         method: "POST",
         headers: {
@@ -86,8 +101,13 @@ export function useMission() {
 
       setRobinStatus("Completed");
       setProgress(20);
+      addMessage("Robin", "Requirement analysis complete.");
+      addMessage("Robin", "Sending report to Zoro.");
+
       setCurrentAgent("Zoro");
       setZoroStatus("Working");
+      addMessage("Zoro", "Received Robin report.");
+      addMessage("Zoro", "Starting backend development.");
       setRobinResult(robinData.result);
 
       addLog("Zoro Started");
@@ -111,8 +131,11 @@ export function useMission() {
       setZoroResult(zoroData.result);
       setZoroStatus("Completed");
       setProgress(40);
+      addMessage("Zoro", "Backend implementation complete.");
+
       setCurrentAgent("Nami");
       setNamiStatus("Working");
+      addMessage("Nami", "Building frontend UI.");
 
       addLog("Nami Started");
       const namiResponse = await fetch("/api/nami", {
@@ -135,8 +158,11 @@ export function useMission() {
       setNamiResult(namiData.result);
       setNamiStatus("Completed");
       setProgress(60);
+      addMessage("Nami", "Frontend implementation complete.");
+
       setCurrentAgent("Franky");
       setFrankyStatus("Working");
+      addMessage("Franky", "Reviewing architecture.");
 
       addLog("Franky Started");
       const frankyResponse = await fetch("/api/franky", {
@@ -166,8 +192,11 @@ export function useMission() {
       setFrankyResult(frankyData.result);
       setFrankyStatus("Completed");
       setProgress(80);
+      addMessage("Franky", "Architecture approved.");
+
       setCurrentAgent("Usopp");
       setUsoppStatus("Working");
+      addMessage("Usopp", "Running QA tests.");
 
       addLog("Usopp Started");
       const usoppResponse = await fetch("/api/usopp", {
@@ -195,10 +224,17 @@ export function useMission() {
 
       setUsoppResult(usoppData.result);
       setUsoppStatus("Completed");
+      addMessage("Usopp", "All tests passed.");
+
       setProjectCount((prev) => prev + 1);
       setSuccessCount((prev) => prev + 1);
       setProgress(100);
       setCurrentAgent("Completed");
+
+      addMessage("System", "All agents completed tasks.");
+      addMessage("System", "Moving to Meeting Room.");
+      addMessage("System", "Meeting started.");
+
       setRequirement("");
     } catch (error) {
       console.error(error);
@@ -211,7 +247,7 @@ export function useMission() {
     } finally {
       setLoading(false);
     }
-  }, [requirement, addLog]);
+  }, [requirement, addLog, addMessage]);
 
   return {
     requirement,
@@ -232,6 +268,7 @@ export function useMission() {
     zoroResult,
     usoppResult,
     logs,
+    messages,
     history,
     startMission,
   };

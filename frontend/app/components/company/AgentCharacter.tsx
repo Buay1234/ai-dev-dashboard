@@ -23,6 +23,7 @@ type Props = {
   size?: "sm" | "md";
   /** Compact icon for room cards — no platform/shadow extras */
   variant?: "full" | "icon";
+  latestMessage?: string;
 };
 
 const SPRITE = {
@@ -140,6 +141,7 @@ function AgentCharacter({
   theme = "purple",
   size = "md",
   variant = "full",
+  latestMessage,
 }: Props) {
   const resolved = resolveStatus(status);
   const glow = CHARACTER_STATUS_GLOW[resolved];
@@ -163,6 +165,12 @@ function AgentCharacter({
         className="relative flex items-center justify-center"
         style={{ width: dims.width, height: dims.height }}
       >
+        {latestMessage && !isIcon && (
+          <div className="absolute -top-10 left-1/2 z-20 max-w-[120px] -translate-x-1/2 whitespace-normal rounded-lg border border-cyan-500/40 bg-black/80 px-2 py-1 text-center text-[9px] leading-tight text-white">
+            {latestMessage}
+          </div>
+        )}
+
         {!isIcon && (
           <motion.div
             className="pointer-events-none absolute -inset-1 rounded-md opacity-60"

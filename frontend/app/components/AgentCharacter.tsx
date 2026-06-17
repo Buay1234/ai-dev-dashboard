@@ -21,6 +21,7 @@ type Props = {
   size?: "sm" | "md" | "lg" | "xl";
   showLabel?: boolean;
   priority?: boolean;
+  latestMessage?: string;
 };
 
 const SIZE_MAP = {
@@ -45,6 +46,7 @@ export default function AgentCharacter({
   mode,
   size = "md",
   showLabel = false,
+  latestMessage,
 }: Props) {
   const theme = AGENT_THEME_STYLES[agent.theme];
   const sizes = SIZE_MAP[size];
@@ -74,7 +76,12 @@ export default function AgentCharacter({
       : theme.bg;
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="relative flex flex-col items-center gap-1">
+      {latestMessage && (
+        <div className="absolute -top-10 left-1/2 z-20 max-w-[140px] -translate-x-1/2 whitespace-normal rounded-lg border border-cyan-500/40 bg-black/80 px-2 py-1 text-center text-[10px] leading-tight text-white">
+          {latestMessage}
+        </div>
+      )}
       <motion.div
         className="relative shrink-0 overflow-hidden rounded-lg border-2"
         style={{

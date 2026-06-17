@@ -7,7 +7,14 @@ import Badge, { statusToBadgeVariant } from "./ui/Badge";
 import { AGENT_CONFIG, AGENT_THEME_STYLES } from "@/lib/agents";
 import type { AgentStatusProps } from "@/lib/types/agent-results";
 
-export default function AgentRoster(props: AgentStatusProps) {
+type Props = AgentStatusProps & {
+  latestMessages?: Record<string, string>;
+};
+
+export default function AgentRoster({
+  latestMessages = {},
+  ...props
+}: Props) {
   const statusMap = {
     Robin: props.robinStatus,
     Zoro: props.zoroStatus,
@@ -47,7 +54,12 @@ export default function AgentRoster(props: AgentStatusProps) {
               }
             >
               <div className="flex flex-col items-center gap-2">
-                <AgentCharacter agent={agent} status={status} size="sm" />
+                <AgentCharacter
+                  agent={agent}
+                  status={status}
+                  size="sm"
+                  latestMessage={latestMessages[agent.name]}
+                />
                 <div>
                   <p
                     className="text-xs font-semibold"
