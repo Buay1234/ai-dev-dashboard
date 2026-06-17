@@ -6,8 +6,8 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 
 import ActivityLog from "./components/ActivityLog";
-
-import ResultCard from "./components/ResultCard";
+import ThinkingPanel from "./components/ThinkingPanel";
+import DeliverablesPanel from "./components/DeliverablesPanel";
 
 import DashboardStats from "./components/DashboardStats";
 
@@ -35,6 +35,7 @@ import SectionHeader from "./components/ui/SectionHeader";
 
 import { useMission } from "@/hooks/use-mission";
 import { indexLatestMessages } from "@/lib/conversation";
+import { thoughtSummariesByAgent } from "@/lib/thinking";
 
 import { extractFiles } from "@/lib/extract-files";
 
@@ -90,16 +91,25 @@ export default function Home() {
 
     messages,
 
+    thoughts,
+
     history,
+
+    artifactBundle,
+
+    artifactHistory,
+
+    artifactSteps,
 
     startMission,
 
   } = useMission();
 
-  const latestMessages = useMemo(
-    () => indexLatestMessages(messages),
-    [messages]
-  );
+  const latestMessages = useMemo(() => {
+    const fromConversation = indexLatestMessages(messages);
+    const fromThoughts = thoughtSummariesByAgent(thoughts);
+    return { ...fromConversation, ...fromThoughts };
+  }, [messages, thoughts]);
 
 
 
@@ -249,8 +259,6 @@ export default function Home() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-              <MissionTimeline {...agentStatusProps} messages={messages} />
-
               <Card padding="md">
 
                 <CardHeader
@@ -317,13 +325,13 @@ export default function Home() {
 
             title="Software House Floor"
 
-            description="Live agent conversations on the pixel-art office floor"
+            description="AI thinking stream · live office simulation · V22"
 
           />
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
 
-            <div className="xl:col-span-2 space-y-6">
+            <div className="xl:col-span-5 space-y-6">
 
               <CompanyFloor
                 {...agentStatusProps}
@@ -339,7 +347,18 @@ export default function Home() {
 
             </div>
 
-            <div className="space-y-6">
+            <div className="xl:col-span-4">
+
+              <ThinkingPanel
+                thoughts={thoughts}
+                progress={progress}
+                artifactSteps={artifactSteps}
+                {...agentStatusProps}
+              />
+
+            </div>
+
+            <div className="xl:col-span-3 space-y-6">
 
               <ActivityLog logs={logs} messages={messages} />
 
@@ -347,72 +366,13 @@ export default function Home() {
 
           </div>
 
-        </section>
+          <div className="mt-6 space-y-6">
 
+            <MissionTimeline {...agentStatusProps} messages={messages} />
 
-
-        <section aria-labelledby="deliverables-heading">
-
-          <SectionHeader
-
-            id="deliverables-heading"
-
-            title="Deliverables"
-
-            description="Output from each agent in the pipeline"
-
-          />
-
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-
-            <ResultCard
-
-              title="Robin — Business Analysis"
-
-              result={robinResult}
-
-              status={robinStatus}
-
-            />
-
-            <ResultCard
-
-              title="Zoro — Backend Design"
-
-              result={zoroResult}
-
-              status={zoroStatus}
-
-            />
-
-            <ResultCard
-
-              title="Nami — Frontend Design"
-
-              result={namiResult}
-
-              status={namiStatus}
-
-            />
-
-            <ResultCard
-
-              title="Franky — Architecture"
-
-              result={frankyResult}
-
-              status={frankyStatus}
-
-            />
-
-            <ResultCard
-
-              title="Usopp — Test Cases"
-
-              result={usoppResult}
-
-              status={usoppStatus}
-
+            <DeliverablesPanel
+              bundle={artifactBundle}
+              history={artifactHistory}
             />
 
           </div>

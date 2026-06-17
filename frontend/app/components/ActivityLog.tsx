@@ -12,7 +12,7 @@ export default function ActivityLog({ logs, messages }: Props) {
     <Card padding="md">
       <CardHeader
         title="Activity Log"
-        description="Live AI conversation · V19"
+        description="Gemini reasoning · V22"
       />
       <div
         className="max-h-80 overflow-y-auto rounded-lg border border-border-subtle bg-surface-1"

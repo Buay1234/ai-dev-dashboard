@@ -2,8 +2,48 @@
 
 import { useCallback, useState } from "react";
 import type { AgentMessage } from "@/app/types/conversation";
+import type { AgentThought } from "@/app/types/thinking";
 import { createAgentMessage } from "@/lib/conversation";
+import {
+  STANDBY_THOUGHTS,
+  createAgentThought,
+  upsertThought,
+} from "@/lib/thinking";
+import type { AgentWorkflowResult } from "@/lib/agents/types";
 import type { AgentStatus } from "@/lib/types/agent-results";
+import type { ArtifactBundle, ArtifactProgressStep } from "@/app/types/artifacts";
+import {
+  clearArtifactStore,
+  getArtifactProgressSteps,
+  runArtifactGeneration,
+} from "@/lib/artifacts/artifact-service";
+
+type AgentApiPayload = AgentWorkflowResult;
+
+function applyAiWorkflow(
+  agent: string,
+  status: string,
+  data: AgentApiPayload,
+  progress: number,
+  setThought: (entry: AgentThought) => void,
+  addMessage: (agent: string, message: string) => void
+) {
+  setThought(
+    createAgentThought(
+      agent,
+      status,
+      data.thoughts?.length ? data.thoughts : ["Processing Gemini output…"],
+      data.summary || data.reasoning,
+      progress
+    )
+  );
+  if (data.reasoning) {
+    addMessage(agent, data.reasoning);
+  }
+  if (data.summary && data.summary !== data.reasoning) {
+    addMessage(agent, data.summary);
+  }
+}
 
 export function useMission() {
   const [requirement, setRequirement] = useState("");
@@ -25,6 +65,14 @@ export function useMission() {
   const [logs, setLogs] = useState<string[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const [messages, setMessages] = useState<AgentMessage[]>([]);
+  const [thoughts, setThoughts] = useState<AgentThought[]>(STANDBY_THOUGHTS);
+  const [artifactBundle, setArtifactBundle] = useState<ArtifactBundle | null>(null);
+  const [artifactHistory, setArtifactHistory] = useState<ArtifactBundle[]>([]);
+  const [artifactSteps, setArtifactSteps] = useState<ArtifactProgressStep[]>([]);
+
+  const setThought = useCallback((entry: AgentThought) => {
+    setThoughts((prev) => upsertThought(prev, entry));
+  }, []);
 
   const addLog = useCallback((message: string) => {
     setLogs((prev) => [
@@ -52,6 +100,10 @@ export function useMission() {
       setLoading(true);
       setProgress(0);
       setMessages([]);
+      setThoughts(STANDBY_THOUGHTS);
+      setArtifactBundle(null);
+      setArtifactSteps([]);
+      clearArtifactStore();
       setRobinResult("");
       setZoroResult("");
       setNamiResult("");
@@ -64,13 +116,22 @@ export function useMission() {
       setFrankyStatus("Idle");
       setUsoppStatus("Idle");
 
+      setThought(
+        createAgentThought(
+          "Robin",
+          "Thinking",
+          ["Connecting to Gemini…", "Preparing business analysis prompt"],
+          "Consulting Gemini",
+          5
+        )
+      );
+
       setHistory((prev) => [
         `${new Date().toLocaleString()} - ${requirement}`,
         ...prev,
       ]);
 
-      addMessage("Robin", "Analyzing requirements...");
-      addLog("Robin Started");
+      addLog("Robin Started — Gemini workflow");
 
       const robinResponse = await fetch("/api/robin", {
         method: "POST",
@@ -91,26 +152,33 @@ export function useMission() {
         throw new Error(errorText);
       }
 
-      const robinData = await robinResponse.json();
+      const robinData = (await robinResponse.json()) as AgentApiPayload;
 
-      if (robinData.result?.includes("Gemini Error")) {
+      if (robinData.result?.includes("Gemini Error") || robinData.result?.includes("Robin Error")) {
         setRobinStatus("Error");
+        applyAiWorkflow("Robin", "Error", robinData, 0, setThought, addMessage);
         setLoading(false);
         return;
       }
 
       setRobinStatus("Completed");
       setProgress(20);
-      addMessage("Robin", "Requirement analysis complete.");
-      addMessage("Robin", "Sending report to Zoro.");
+      setRobinResult(robinData.result);
+      applyAiWorkflow("Robin", "Thinking", robinData, 20, setThought, addMessage);
 
       setCurrentAgent("Zoro");
       setZoroStatus("Working");
-      addMessage("Zoro", "Received Robin report.");
-      addMessage("Zoro", "Starting backend development.");
-      setRobinResult(robinData.result);
+      setThought(
+        createAgentThought(
+          "Zoro",
+          "Developing",
+          ["Waiting for Robin report…", "Connecting to Gemini…"],
+          "Consulting Gemini",
+          22
+        )
+      );
 
-      addLog("Zoro Started");
+      addLog("Zoro Started — Gemini workflow");
       const zoroResponse = await fetch("/api/zoro", {
         method: "POST",
         headers: {
@@ -126,18 +194,26 @@ export function useMission() {
         throw new Error("zoro Agent Failed");
       }
 
-      const zoroData = await zoroResponse.json();
+      const zoroData = (await zoroResponse.json()) as AgentApiPayload;
 
       setZoroResult(zoroData.result);
       setZoroStatus("Completed");
       setProgress(40);
-      addMessage("Zoro", "Backend implementation complete.");
+      applyAiWorkflow("Zoro", "Developing", zoroData, 40, setThought, addMessage);
 
       setCurrentAgent("Nami");
       setNamiStatus("Working");
-      addMessage("Nami", "Building frontend UI.");
+      setThought(
+        createAgentThought(
+          "Nami",
+          "Building UI",
+          ["Reviewing backend plan…", "Connecting to Gemini…"],
+          "Consulting Gemini",
+          42
+        )
+      );
 
-      addLog("Nami Started");
+      addLog("Nami Started — Gemini workflow");
       const namiResponse = await fetch("/api/nami", {
         method: "POST",
         headers: {
@@ -153,18 +229,26 @@ export function useMission() {
         throw new Error("Nami Agent Failed");
       }
 
-      const namiData = await namiResponse.json();
+      const namiData = (await namiResponse.json()) as AgentApiPayload;
 
       setNamiResult(namiData.result);
       setNamiStatus("Completed");
       setProgress(60);
-      addMessage("Nami", "Frontend implementation complete.");
+      applyAiWorkflow("Nami", "Building UI", namiData, 60, setThought, addMessage);
 
       setCurrentAgent("Franky");
       setFrankyStatus("Working");
-      addMessage("Franky", "Reviewing architecture.");
+      setThought(
+        createAgentThought(
+          "Franky",
+          "Reviewing",
+          ["Reviewing deliverables…", "Connecting to Gemini…"],
+          "Consulting Gemini",
+          62
+        )
+      );
 
-      addLog("Franky Started");
+      addLog("Franky Started — Gemini workflow");
       const frankyResponse = await fetch("/api/franky", {
         method: "POST",
         headers: {
@@ -181,35 +265,41 @@ export function useMission() {
         throw new Error("Franky Agent Failed");
       }
 
-      const frankyData = await frankyResponse.json();
+      const frankyData = (await frankyResponse.json()) as AgentApiPayload;
 
       if (frankyData.result?.startsWith("Franky Error:")) {
         setFrankyResult(frankyData.result);
         setFrankyStatus("Error");
+        applyAiWorkflow("Franky", "Error", frankyData, 60, setThought, addMessage);
         return;
       }
 
       setFrankyResult(frankyData.result);
       setFrankyStatus("Completed");
       setProgress(80);
-      addMessage("Franky", "Architecture approved.");
+      applyAiWorkflow("Franky", "Reviewing", frankyData, 80, setThought, addMessage);
 
       setCurrentAgent("Usopp");
       setUsoppStatus("Working");
-      addMessage("Usopp", "Running QA tests.");
+      setThought(
+        createAgentThought(
+          "Usopp",
+          "Testing",
+          ["Preparing QA plan…", "Connecting to Gemini…"],
+          "Consulting Gemini",
+          82
+        )
+      );
 
-      addLog("Usopp Started");
+      addLog("Usopp Started — Gemini workflow");
       const usoppResponse = await fetch("/api/usopp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          apiDesign: `
-          ${zoroData.result}
-
-          ${frankyData.result}
-          `,
+          frankyDesign: frankyData.result,
+          backendDesign: zoroData.result,
         }),
       });
       addLog("Usopp Completed");
@@ -220,20 +310,73 @@ export function useMission() {
         throw new Error("usopp Agent Failed");
       }
 
-      const usoppData = await usoppResponse.json();
+      const usoppData = (await usoppResponse.json()) as AgentApiPayload;
 
       setUsoppResult(usoppData.result);
       setUsoppStatus("Completed");
-      addMessage("Usopp", "All tests passed.");
+      applyAiWorkflow("Usopp", "Testing", usoppData, 90, setThought, addMessage);
+
+      setCurrentAgent("Artifacts");
+      setThought(
+        createAgentThought(
+          "System",
+          "Generating",
+          ["Collecting agent outputs", "Building project documents"],
+          "Artifact generation",
+          92
+        )
+      );
+      addLog("Artifact Generation Started");
+
+      const bundle = runArtifactGeneration(
+        {
+          requirement,
+          robin: robinData.result,
+          zoro: zoroData.result,
+          nami: namiData.result,
+          franky: frankyData.result,
+          usopp: usoppData.result,
+        },
+        requirement
+      );
+
+      const steps = getArtifactProgressSteps(bundle.artifacts);
+      for (const artifact of bundle.artifacts) {
+        addMessage(artifact.agent, `generated ${artifact.name}`);
+        addLog(`${artifact.agent} generated ${artifact.name}`);
+      }
+
+      setArtifactBundle(bundle);
+      setArtifactHistory((prev) => [bundle, ...prev]);
+      setArtifactSteps(steps.map((s) => ({ ...s, done: true })));
+
+      setThought(
+        createAgentThought(
+          "System",
+          "Generating",
+          steps.map((s) => `${s.label} ✓`),
+          "All artifacts generated",
+          98
+        )
+      );
 
       setProjectCount((prev) => prev + 1);
       setSuccessCount((prev) => prev + 1);
       setProgress(100);
       setCurrentAgent("Completed");
 
-      addMessage("System", "All agents completed tasks.");
-      addMessage("System", "Moving to Meeting Room.");
-      addMessage("System", "Meeting started.");
+      setThought(
+        createAgentThought(
+          "System",
+          "Meeting",
+          ["Mission complete", "Gathering team", "Starting meeting"],
+          "Crew meeting",
+          100
+        )
+      );
+
+      addMessage("System", "All agents completed tasks. Moving to Meeting Room.");
+      addMessage("System", "Project Deliverables Ready");
 
       setRequirement("");
     } catch (error) {
@@ -247,7 +390,7 @@ export function useMission() {
     } finally {
       setLoading(false);
     }
-  }, [requirement, addLog, addMessage]);
+  }, [requirement, addLog, addMessage, setThought]);
 
   return {
     requirement,
@@ -269,7 +412,11 @@ export function useMission() {
     usoppResult,
     logs,
     messages,
+    thoughts,
     history,
+    artifactBundle,
+    artifactHistory,
+    artifactSteps,
     startMission,
   };
 }

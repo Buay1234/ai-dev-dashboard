@@ -49,10 +49,10 @@ function OfficeMap({
         <header className="mb-5 flex items-center justify-between gap-3">
           <div>
             <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-cyan-400/80">
-              Visual AI Office · V19
+              Visual AI Office · V22
             </p>
             <h2 className="text-base sm:text-lg font-bold text-zinc-100 tracking-tight">
-              Live AI Conversation
+              Project Artifact Generator
             </h2>
           </div>
           <motion.span

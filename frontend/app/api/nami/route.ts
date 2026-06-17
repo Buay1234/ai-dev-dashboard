@@ -1,28 +1,21 @@
-import { gemini } from "@/lib/gemini";
+import { getErrorMessage } from "@/lib/get-error-message";
+import { runNamiAgent } from "@/lib/agents/nami-agent";
 
 export async function POST(req: Request) {
-  const body = await req.json();
+  try {
+    const body = await req.json();
+    const output = await runNamiAgent(body.backendDesign);
 
-  const response = await gemini.models.generateContent({
-    model: "gemini-2.5-flash-lite",
-    contents: `
-คุณคือ Senior Frontend Developer
-
-Backend Design
-
-${body.backendDesign}
-
-สร้าง
-
-1. UI Screens
-2. Components
-3. Page Flow
-4. Tailwind Layout
-5. Responsive Design
-`,
-  });
-
-  return Response.json({
-    result: response.text,
-  });
+    return Response.json(output);
+  } catch (error: unknown) {
+    return Response.json(
+      {
+        result: "Nami Error: " + getErrorMessage(error),
+        thoughts: ["Frontend planning failed"],
+        summary: "Frontend error",
+        reasoning: getErrorMessage(error),
+      },
+      { status: 500 }
+    );
+  }
 }

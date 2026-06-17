@@ -1,27 +1,23 @@
-import { gemini } from "@/lib/gemini";
+import { getErrorMessage } from "@/lib/get-error-message";
+import { runUsoppAgent } from "@/lib/agents/usopp-agent";
 
 export async function POST(req: Request) {
-  const body = await req.json();
+  try {
+    const body = await req.json();
+    const frankyOutput = body.frankyDesign ?? body.apiDesign ?? "";
+    const zoroOutput = body.backendDesign ?? body.apiDesign ?? "";
+    const output = await runUsoppAgent(frankyOutput, zoroOutput);
 
-  const response = await gemini.models.generateContent({
-    model: "gemini-2.5-flash-lite",
-    contents: `
-คุณคือ Senior QA Engineer
-
-API Design
-
-${body.apiDesign}
-
-สร้าง
-
-1. Positive Test Cases
-2. Negative Test Cases
-3. Edge Cases
-4. Security Tests
-`,
-  });
-
-  return Response.json({
-    result: response.text,
-  });
+    return Response.json(output);
+  } catch (error: unknown) {
+    return Response.json(
+      {
+        result: "Usopp Error: " + getErrorMessage(error),
+        thoughts: ["QA planning failed"],
+        summary: "QA error",
+        reasoning: getErrorMessage(error),
+      },
+      { status: 500 }
+    );
+  }
 }

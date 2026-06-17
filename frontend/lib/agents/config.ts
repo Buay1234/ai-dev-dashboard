@@ -70,7 +70,6 @@ export const AGENT_CONFIG: AgentConfig[] = [
   },
 ];
 
-/** Room index: -1 = Reception, 0..4 = agent offices */
 export function getCharacterRoomIndex(currentAgent: string): number {
   if (currentAgent === "Idle") return -1;
   return getActiveAgentIndex(currentAgent);
