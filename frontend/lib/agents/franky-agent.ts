@@ -1,3 +1,4 @@
+import "server-only";
 import { buildMetaInstructions, runGeminiWorkflow } from "./gemini-runner";
 import type { AgentWorkflowResult } from "./types";
 

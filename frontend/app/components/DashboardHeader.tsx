@@ -5,7 +5,7 @@ import Badge from "./ui/Badge";
 import {
   getMissionStatusLabel,
   getSuccessRate,
-} from "@/lib/agents";
+} from "@/lib/agents/config";
 
 type Props = {
   loading: boolean;

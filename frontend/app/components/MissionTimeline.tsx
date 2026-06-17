@@ -8,7 +8,7 @@ import {
   AGENT_THEME_STYLES,
   isMissionActive,
   toAgentStatusMap,
-} from "@/lib/agents";
+} from "@/lib/agents/config";
 import type { AgentStatusProps } from "@/lib/types/agent-results";
 import type { AgentMessage } from "@/app/types/conversation";
 import { getLatestAgentMessage } from "@/lib/conversation";

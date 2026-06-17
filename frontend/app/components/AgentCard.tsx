@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import AgentCharacter from "./AgentCharacter";
 import Card from "./ui/Card";
 import Badge, { statusToBadgeVariant } from "./ui/Badge";
-import { AGENT_CONFIG, AGENT_THEME_STYLES } from "@/lib/agents";
+import { AGENT_CONFIG, AGENT_THEME_STYLES } from "@/lib/agents/config";
 import type { AgentStatus } from "@/lib/types/agent-results";
 
 type Props = {

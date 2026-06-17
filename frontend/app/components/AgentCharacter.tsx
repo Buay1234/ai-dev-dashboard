@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import {
   AGENT_THEME_STYLES,
   type AgentConfig,
-} from "@/lib/agents";
+} from "@/lib/agents/config";
 import type { AgentStatus } from "@/lib/types/agent-results";
 import SpriteAnimator from "./company/SpriteAnimator";
 import {

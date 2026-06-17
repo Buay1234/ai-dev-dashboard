@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Badge from "./ui/Badge";
-import { RECEPTION_LABEL } from "@/lib/agents";
+import { RECEPTION_LABEL } from "@/lib/agents/config";
 
 type Props = {
   isActive: boolean;

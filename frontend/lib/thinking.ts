@@ -1,5 +1,5 @@
 import type { AgentThought } from "@/app/types/thinking";
-import { AGENT_NAMES } from "@/lib/agents";
+import { AGENT_NAMES } from "@/lib/agents/config";
 
 export type { AgentThought };
 

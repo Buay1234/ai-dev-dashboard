@@ -6,7 +6,7 @@ import Badge, { statusToBadgeVariant } from "./ui/Badge";
 import {
   AGENT_THEME_STYLES,
   type AgentConfig,
-} from "@/lib/agents";
+} from "@/lib/agents/config";
 import type { AgentStatus } from "@/lib/types/agent-results";
 
 const STATUS_GLOW = {

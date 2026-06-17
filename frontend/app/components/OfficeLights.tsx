@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { motion } from "framer-motion";
-import { AGENT_CONFIG } from "@/lib/agents";
+import { AGENT_CONFIG } from "@/lib/agents/config";
 import { getRoomTopY, RECEPTION_Y, ROOM_HEIGHT } from "@/lib/office-layout";
 
 type Props = {

@@ -1,4 +1,4 @@
-import { AGENT_NAMES } from "@/lib/agents";
+import { AGENT_NAMES } from "@/lib/agents/config";
 import type { AgentStatus } from "@/lib/types/agent-results";
 
 /** Percentage-based floor anchor (0–100) on office-map.png */

@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { motion } from "framer-motion";
-import { AGENT_THEME_STYLES, type AgentConfig } from "@/lib/agents";
+import { AGENT_THEME_STYLES, type AgentConfig } from "@/lib/agents/config";
 import type { AgentStatus } from "@/lib/types/agent-results";
 
 const STATUS_LABEL: Record<string, string> = {

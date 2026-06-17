@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import AgentCharacter from "./AgentCharacter";
 import Card, { CardHeader } from "./ui/Card";
-import { AGENT_CONFIG, AGENT_THEME_STYLES } from "@/lib/agents";
+import { AGENT_CONFIG, AGENT_THEME_STYLES } from "@/lib/agents/config";
 import type { AgentStatusProps } from "@/lib/types/agent-results";
 import type { AgentThought } from "@/app/types/thinking";
 import type { ArtifactProgressStep } from "@/app/types/artifacts";

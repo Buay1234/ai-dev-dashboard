@@ -1,3 +1,4 @@
+import "server-only";
 import { gemini } from "@/lib/gemini";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { buildMetaInstructions, parseAgentResponse } from "./parse-response";

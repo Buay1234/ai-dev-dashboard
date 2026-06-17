@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { memo, useMemo } from "react";
 import { motion } from "framer-motion";
-import { AGENT_NAMES } from "@/lib/agents";
+import { AGENT_NAMES } from "@/lib/agents/config";
 import type { AgentStatus } from "@/lib/types/agent-results";
 import PixelAgent from "./PixelAgent";
 import {

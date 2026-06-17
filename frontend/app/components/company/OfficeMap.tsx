@@ -4,7 +4,7 @@ import { memo, useMemo } from "react";
 import { motion } from "framer-motion";
 import OfficeBackground from "./OfficeBackground";
 import PixelWorld from "./PixelWorld";
-import { isMissionActive } from "@/lib/agents";
+import { isMissionActive } from "@/lib/agents/config";
 import type { AgentStatusProps } from "@/lib/types/agent-results";
 import { getMissionStage } from "./office-map-config";
 

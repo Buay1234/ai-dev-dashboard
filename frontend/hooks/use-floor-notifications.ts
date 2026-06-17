@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AGENT_NAMES } from "@/lib/agents";
+import { AGENT_NAMES } from "@/lib/agents/config";
 import type { AgentStatus } from "@/lib/types/agent-results";
 
 export type FloorNotification = {

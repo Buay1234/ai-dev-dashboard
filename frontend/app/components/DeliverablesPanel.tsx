@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ArtifactBundle, ProjectArtifact } from "@/app/types/artifacts";
-import { AGENT_THEME_STYLES } from "@/lib/agents";
+import { AGENT_THEME_STYLES } from "@/lib/agents/config";
 import {
   copyArtifactToClipboard,
   downloadArtifact,
