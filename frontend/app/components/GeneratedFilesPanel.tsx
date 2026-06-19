@@ -16,6 +16,7 @@ import EmptyState from "./ui/EmptyState";
 type Props = {
   project: GeneratedProjectBundle | null;
   artifactBundle?: ArtifactBundle | null;
+  exportEnabled?: boolean;
 };
 
 const CATEGORIES: {
@@ -133,7 +134,11 @@ function SourceFileRow({
   );
 }
 
-export default function GeneratedFilesPanel({ project, artifactBundle }: Props) {
+export default function GeneratedFilesPanel({
+  project,
+  artifactBundle,
+  exportEnabled = false,
+}: Props) {
   const [preview, setPreview] = useState<GeneratedSourceFile | null>(null);
 
   const grouped = useMemo(() => {
@@ -157,12 +162,23 @@ export default function GeneratedFilesPanel({ project, artifactBundle }: Props) 
             project ? (
               <button
                 type="button"
+                disabled={!exportEnabled}
                 onClick={() =>
+                  exportEnabled &&
                   void exportGeneratedProjectZip(project, artifactBundle)
                 }
-                className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-emerald-300 hover:bg-emerald-500/20"
+                className={`rounded-lg border px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider ${
+                  exportEnabled
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                    : "border-zinc-600/40 bg-zinc-800/50 text-zinc-500 cursor-not-allowed"
+                }`}
+                title={
+                  exportEnabled
+                    ? "Export verified project"
+                    : "Complete Usopp build verification first"
+                }
               >
-                Export ZIP
+                {exportEnabled ? "Export ZIP" : "Export Locked"}
               </button>
             ) : undefined
           }

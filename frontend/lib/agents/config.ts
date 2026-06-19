@@ -61,8 +61,8 @@ export const AGENT_CONFIG: AgentConfig[] = [
   },
   {
     name: "Usopp",
-    role: "QA Tester",
-    officeTitle: "Usopp QA Testing Center",
+    role: "Build Verification Agent",
+    officeTitle: "Usopp Build Verification Center",
     icon: "🔫",
     avatar: "🎯",
     image: "/agents/usopp.png",

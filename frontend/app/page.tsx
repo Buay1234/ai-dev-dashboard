@@ -13,6 +13,7 @@ import DatabasePanel from "./components/DatabasePanel";
 import ExecutionCenterPanel from "./components/ExecutionCenterPanel";
 import ExecutionTimeline from "./components/ExecutionTimeline";
 import MigrationProgressPanel from "./components/MigrationProgressPanel";
+import BuildStatusPanel from "./components/BuildStatusPanel";
 
 import DashboardStats from "./components/DashboardStats";
 
@@ -119,6 +120,12 @@ export default function Home() {
 
     artifactSteps,
 
+    buildVerification,
+
+    buildVerificationRunning,
+
+    exportEnabled,
+
     startMission,
 
   } = useMission();
@@ -165,12 +172,15 @@ export default function Home() {
 
 
 
+  const projectZipLocked = Boolean(projectBundle) && !exportEnabled;
+
   const exportMarkdown = () => downloadMarkdownReport(agentResults);
 
   const exportPdf = () => downloadPdfReport(agentResults);
 
   const generateZip = () => {
     if (projectBundle) {
+      if (!exportEnabled) return;
       void exportGeneratedProjectZip(projectBundle, artifactBundle);
       return;
     }
@@ -354,6 +364,8 @@ export default function Home() {
 
               onGenerateZip={generateZip}
 
+              zipLocked={projectZipLocked}
+
               onTestExtract={testExtract}
 
               onDebugFiles={() => console.log(extractFiles(zoroResult))}
@@ -415,6 +427,11 @@ export default function Home() {
               liveSteps={liveExecutionSteps}
             />
 
+            <BuildStatusPanel
+              result={buildVerification}
+              running={buildVerificationRunning}
+            />
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <DatabasePanel
                 panelInfo={executionReport?.databasePanel ?? null}
@@ -430,6 +447,7 @@ export default function Home() {
             <GeneratedFilesPanel
               project={projectBundle}
               artifactBundle={artifactBundle}
+              exportEnabled={exportEnabled}
             />
 
             <DeliverablesPanel

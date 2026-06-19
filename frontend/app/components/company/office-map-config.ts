@@ -62,7 +62,7 @@ export const ROOM_LABELS: { zone: MapZone; title: string }[] = [
   { zone: "Zoro", title: "Zoro Backend Lab" },
   { zone: "Nami", title: "Nami Frontend Studio" },
   { zone: "Franky", title: "Franky Architecture Room" },
-  { zone: "Usopp", title: "Usopp QA Center" },
+  { zone: "Usopp", title: "Usopp Build Verification Center" },
 ];
 
 export function anchorToFloorStyle(anchor: MapAnchor) {

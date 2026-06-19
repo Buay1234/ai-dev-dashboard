@@ -6,6 +6,7 @@ type Props = {
   onExportMarkdown: () => void;
   onExportPdf: () => void;
   onGenerateZip: () => void;
+  zipLocked?: boolean;
   onTestExtract: () => void;
   onDebugFiles: () => void;
   onShowZoroResult: () => void;
@@ -15,6 +16,7 @@ export default function ExportToolbar({
   onExportMarkdown,
   onExportPdf,
   onGenerateZip,
+  zipLocked = false,
   onTestExtract,
   onDebugFiles,
   onShowZoroResult,
@@ -31,8 +33,18 @@ export default function ExportToolbar({
       <Button variant="danger" size="sm" onClick={onExportPdf}>
         Export PDF
       </Button>
-      <Button variant="primary" size="sm" onClick={onGenerateZip}>
-        Download ZIP
+      <Button
+        variant="primary"
+        size="sm"
+        onClick={onGenerateZip}
+        disabled={zipLocked}
+        title={
+          zipLocked
+            ? "Complete Usopp build verification first"
+            : "Download project ZIP"
+        }
+      >
+        {zipLocked ? "ZIP Locked" : "Download ZIP"}
       </Button>
       <Button variant="ghost" size="sm" onClick={onTestExtract}>
         Test Extract

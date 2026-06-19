@@ -15,12 +15,19 @@ import type { ArtifactBundle, ArtifactProgressStep } from "@/app/types/artifacts
 import type { GeneratedProjectBundle } from "@/lib/project-generator/types";
 import type { DatabaseWorkflowState, MigrationProgressStep } from "@/lib/database/database-status";
 import { simulateMigrationApplied } from "@/lib/database/database-service";
-import type { ExecutionReport, ExecutionTimelineEvent } from "@/lib/execution/execution-types";
+import type {
+  ExecutionReport,
+  ExecutionStep,
+  ExecutionTimelineEvent,
+} from "@/lib/execution/execution-types";
 import {
   runFullExecutionPipeline,
   upsertExecutionStep,
 } from "@/lib/execution";
-import type { ExecutionStep } from "@/lib/execution/execution-types";
+import {
+  runBuildVerification,
+  type BuildVerificationResult,
+} from "@/lib/build-verification";
 import {
   clearArtifactStore,
   getArtifactProgressSteps,
@@ -84,6 +91,9 @@ export function useMission() {
   const [executionReport, setExecutionReport] = useState<ExecutionReport | null>(null);
   const [executionTimeline, setExecutionTimeline] = useState<ExecutionTimelineEvent[]>([]);
   const [liveExecutionSteps, setLiveExecutionSteps] = useState<ExecutionStep[]>([]);
+  const [buildVerification, setBuildVerification] =
+    useState<BuildVerificationResult | null>(null);
+  const [buildVerificationRunning, setBuildVerificationRunning] = useState(false);
   const [artifactSteps, setArtifactSteps] = useState<ArtifactProgressStep[]>([]);
 
   const setThought = useCallback((entry: AgentThought) => {
@@ -124,6 +134,8 @@ export function useMission() {
       setExecutionReport(null);
       setExecutionTimeline([]);
       setLiveExecutionSteps([]);
+      setBuildVerification(null);
+      setBuildVerificationRunning(false);
       setArtifactSteps([]);
       clearArtifactStore();
       setRobinResult("");
@@ -379,7 +391,6 @@ export function useMission() {
       }
 
       setArtifactBundle(bundle);
-      setProjectBundle(project);
       setDatabaseWorkflow(project.databaseWorkflow);
       setMigrationSteps(project.databaseWorkflow.progressSteps);
       setArtifactHistory((prev) => [bundle, ...prev]);
@@ -389,21 +400,77 @@ export function useMission() {
       ]);
 
       setCurrentAgent("Usopp");
+      setBuildVerificationRunning(true);
       setThought(
         createAgentThought(
           "Usopp",
           "Testing",
-          ["CRUD validation", "Unit test execution", "dotnet test"],
-          "V25 execution center",
+          ["dotnet restore", "dotnet build", "Auto-fix compiler errors", "dotnet test"],
+          "Build Verification Agent",
+          92
+        )
+      );
+      addLog("Usopp Started — Build Verification (restore · build · test)");
+
+      const { result: buildResult, sourceFiles: verifiedFiles } =
+        await runBuildVerification(project, (partial) => {
+          setBuildVerification((prev) => ({
+            complete: false,
+            restore: "pending",
+            build: "pending",
+            tests: "pending",
+            qaScore: 0,
+            attempts: 0,
+            maxAttempts: 5,
+            ...prev,
+            ...partial,
+            errorsFixed: partial.errorsFixed ?? prev?.errorsFixed ?? [],
+          }));
+        });
+
+      setBuildVerificationRunning(false);
+      setBuildVerification(buildResult);
+
+      const verifiedProject: GeneratedProjectBundle = {
+        ...project,
+        sourceFiles: verifiedFiles,
+      };
+      setProjectBundle(verifiedProject);
+
+      for (const fix of buildResult.errorsFixed) {
+        addLog(`Usopp auto-fix: ${fix}`);
+      }
+      addMessage(
+        "Usopp",
+        `Build verification — Restore: ${buildResult.restore}, Build: ${buildResult.build}, Tests: ${buildResult.tests}`
+      );
+      addMessage("Usopp", `QA Score: ${buildResult.qaScore}%`);
+
+      if (!buildResult.complete) {
+        addMessage("System", "Export locked — build verification did not pass");
+      }
+
+      setThought(
+        createAgentThought(
+          "Usopp",
+          "Testing",
+          [
+            `Restore: ${buildResult.restore}`,
+            `Build: ${buildResult.build}`,
+            `Tests: ${buildResult.tests}`,
+            `QA Score: ${buildResult.qaScore}%`,
+          ],
+          buildResult.complete ? "Build verified" : "Build needs fixes",
           94
         )
       );
+
       addLog("Usopp Started — CRUD & unit test execution");
 
       setLiveExecutionSteps([]);
       setExecutionTimeline([]);
 
-      const execReport = await runFullExecutionPipeline(project, (step, evt) => {
+      const execReport = await runFullExecutionPipeline(verifiedProject, (step, evt) => {
         setLiveExecutionSteps((prev) => upsertExecutionStep(prev, step));
         setExecutionTimeline((prev) => [...prev, evt]);
         addLog(`${step.agent ?? "System"}: ${step.label} — ${step.status}`);
@@ -520,6 +587,9 @@ export function useMission() {
     executionReport,
     executionTimeline,
     liveExecutionSteps,
+    buildVerification,
+    buildVerificationRunning,
+    exportEnabled: buildVerification?.complete === true,
     artifactSteps,
     simulateMigrationApply,
     startMission,
