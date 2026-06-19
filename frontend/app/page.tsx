@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import ActivityLog from "./components/ActivityLog";
 import ThinkingPanel from "./components/ThinkingPanel";
 import DeliverablesPanel from "./components/DeliverablesPanel";
+import GeneratedFilesPanel from "./components/GeneratedFilesPanel";
 
 import DashboardStats from "./components/DashboardStats";
 
@@ -44,6 +45,7 @@ import { downloadMarkdownReport } from "@/lib/export-markdown";
 import { downloadPdfReport } from "@/lib/export-pdf";
 
 import { generateProjectZip } from "@/lib/generate-zip";
+import { exportGeneratedProjectZip } from "@/lib/export-project-zip";
 
 import type { AgentResults } from "@/lib/types/agent-results";
 
@@ -99,6 +101,8 @@ export default function Home() {
 
     artifactHistory,
 
+    projectBundle,
+
     artifactSteps,
 
     startMission,
@@ -152,9 +156,11 @@ export default function Home() {
   const exportPdf = () => downloadPdfReport(agentResults);
 
   const generateZip = () => {
-
+    if (projectBundle) {
+      void exportGeneratedProjectZip(projectBundle, artifactBundle);
+      return;
+    }
     void generateProjectZip(zoroResult);
-
   };
 
   const testExtract = () => console.log(extractFiles(zoroResult));
@@ -356,7 +362,7 @@ export default function Home() {
 
             title="Visual AI Office"
 
-            description="Live agent simulation · focus layout · V22.1"
+            description="Live agent simulation · V23 database generator"
 
           />
 
@@ -388,7 +394,12 @@ export default function Home() {
             </div>
           )}
 
-          <div className="mt-6">
+          <div className="mt-6 space-y-6">
+
+            <GeneratedFilesPanel
+              project={projectBundle}
+              artifactBundle={artifactBundle}
+            />
 
             <DeliverablesPanel
               bundle={artifactBundle}

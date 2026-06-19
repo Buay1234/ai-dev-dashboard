@@ -200,7 +200,7 @@ export default function DeliverablesPanel({ bundle, history }: Props) {
       <Card padding="md" className="border-cyan-500/20">
         <CardHeader
           title="Deliverables Panel"
-          description="Project Artifact Generator · V22.1"
+          description="Project Artifact Generator · V23"
           action={
             bundle ? (
               <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-cyan-300">

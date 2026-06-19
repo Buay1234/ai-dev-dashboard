@@ -1,20 +1,29 @@
 import { saveAs } from "file-saver";
 import type { ArtifactBundle, ProjectArtifact } from "@/app/types/artifacts";
+import type { GeneratedProjectBundle } from "@/lib/project-generator/types";
 import {
   generateProjectArtifacts,
   getArtifactProgressSteps,
   type AgentOutputs,
 } from "./artifact-generator";
+import {
+  generateProjectBundle,
+  getProjectGenerationSteps,
+} from "@/lib/project-generator";
 
-/** In-memory store — ready for V23 ZIP / PDF / Excel exporters */
+/** In-memory store — V22 docs + V23 source project */
 const bundleHistory: ArtifactBundle[] = [];
+const projectHistory: GeneratedProjectBundle[] = [];
 let latestBundle: ArtifactBundle | null = null;
+let latestProject: GeneratedProjectBundle | null = null;
 
 export function runArtifactGeneration(
   outputs: AgentOutputs,
   requirement: string
-): ArtifactBundle {
+): { bundle: ArtifactBundle; project: GeneratedProjectBundle } {
   const artifacts = generateProjectArtifacts(outputs);
+  const project = generateProjectBundle(outputs, requirement);
+
   const bundle: ArtifactBundle = {
     id: `mission-${Date.now()}`,
     artifacts,
@@ -23,8 +32,18 @@ export function runArtifactGeneration(
   };
 
   latestBundle = bundle;
+  latestProject = project;
   bundleHistory.unshift(bundle);
-  return bundle;
+  projectHistory.unshift(project);
+  return { bundle, project };
+}
+
+export function getLatestProjectBundle(): GeneratedProjectBundle | null {
+  return latestProject;
+}
+
+export function getProjectHistory(): GeneratedProjectBundle[] {
+  return [...projectHistory];
 }
 
 export function getLatestArtifactBundle(): ArtifactBundle | null {
@@ -37,7 +56,9 @@ export function getArtifactHistory(): ArtifactBundle[] {
 
 export function clearArtifactStore() {
   latestBundle = null;
+  latestProject = null;
   bundleHistory.length = 0;
+  projectHistory.length = 0;
 }
 
 export function downloadArtifact(artifact: ProjectArtifact) {
@@ -83,5 +104,5 @@ export function prepareExportManifest(bundle: ArtifactBundle) {
   };
 }
 
-export { generateProjectArtifacts, getArtifactProgressSteps };
+export { generateProjectArtifacts, getArtifactProgressSteps, getProjectGenerationSteps };
 export type { AgentOutputs };

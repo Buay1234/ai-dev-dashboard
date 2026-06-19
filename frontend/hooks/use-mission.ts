@@ -12,9 +12,11 @@ import {
 import type { AgentWorkflowResult } from "@/lib/agents/types";
 import type { AgentStatus } from "@/lib/types/agent-results";
 import type { ArtifactBundle, ArtifactProgressStep } from "@/app/types/artifacts";
+import type { GeneratedProjectBundle } from "@/lib/project-generator/types";
 import {
   clearArtifactStore,
   getArtifactProgressSteps,
+  getProjectGenerationSteps,
   runArtifactGeneration,
 } from "@/lib/artifacts/artifact-service";
 
@@ -68,6 +70,7 @@ export function useMission() {
   const [thoughts, setThoughts] = useState<AgentThought[]>(STANDBY_THOUGHTS);
   const [artifactBundle, setArtifactBundle] = useState<ArtifactBundle | null>(null);
   const [artifactHistory, setArtifactHistory] = useState<ArtifactBundle[]>([]);
+  const [projectBundle, setProjectBundle] = useState<GeneratedProjectBundle | null>(null);
   const [artifactSteps, setArtifactSteps] = useState<ArtifactProgressStep[]>([]);
 
   const setThought = useCallback((entry: AgentThought) => {
@@ -102,6 +105,7 @@ export function useMission() {
       setMessages([]);
       setThoughts(STANDBY_THOUGHTS);
       setArtifactBundle(null);
+      setProjectBundle(null);
       setArtifactSteps([]);
       clearArtifactStore();
       setRobinResult("");
@@ -321,14 +325,14 @@ export function useMission() {
         createAgentThought(
           "System",
           "Generating",
-          ["Collecting agent outputs", "Building project documents"],
-          "Artifact generation",
+          ["Extracting entities", "Building EF Core project", "Generating CRUD APIs"],
+          "V23 project generation",
           92
         )
       );
-      addLog("Artifact Generation Started");
+      addLog("Project Generation Started — V23");
 
-      const bundle = runArtifactGeneration(
+      const { bundle, project } = runArtifactGeneration(
         {
           requirement,
           robin: robinData.result,
@@ -340,22 +344,35 @@ export function useMission() {
         requirement
       );
 
-      const steps = getArtifactProgressSteps(bundle.artifacts);
+      const docSteps = getArtifactProgressSteps(bundle.artifacts);
+      const codeSteps = getProjectGenerationSteps(project.entities);
+
       for (const artifact of bundle.artifacts) {
         addMessage(artifact.agent, `generated ${artifact.name}`);
         addLog(`${artifact.agent} generated ${artifact.name}`);
       }
 
+      for (const file of project.sourceFiles.filter((f) => f.language === "csharp")) {
+        addLog(`${file.agent} generated ${file.fileName}`);
+      }
+
       setArtifactBundle(bundle);
+      setProjectBundle(project);
       setArtifactHistory((prev) => [bundle, ...prev]);
-      setArtifactSteps(steps.map((s) => ({ ...s, done: true })));
+      setArtifactSteps([
+        ...docSteps.map((s) => ({ ...s, done: true })),
+        ...codeSteps.map((s) => ({ id: s.id, label: s.label, done: s.done })),
+      ]);
 
       setThought(
         createAgentThought(
           "System",
           "Generating",
-          steps.map((s) => `${s.label} ✓`),
-          "All artifacts generated",
+          [
+            ...codeSteps.map((s) => `${s.label} ✓`),
+            "Project ZIP ready",
+          ],
+          "EF Core project generated",
           98
         )
       );
@@ -377,6 +394,7 @@ export function useMission() {
 
       addMessage("System", "All agents completed tasks. Moving to Meeting Room.");
       addMessage("System", "Project Deliverables Ready");
+      addMessage("System", "EF Core source project generated — export ZIP from Generated Files Panel");
 
       setRequirement("");
     } catch (error) {
@@ -416,6 +434,7 @@ export function useMission() {
     history,
     artifactBundle,
     artifactHistory,
+    projectBundle,
     artifactSteps,
     startMission,
   };

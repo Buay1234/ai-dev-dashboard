@@ -65,7 +65,7 @@ export default function ThinkingPanel({
     <Card padding="md" className={`flex flex-col border-cyan-500/20 bg-slate-950/80 ${compact ? "min-h-0" : "h-full min-h-[320px]"}`}>
       <CardHeader
         title="AI Thinking Panel"
-        description="Gemini output stream · V22.1"
+        description="Gemini output stream · V23"
       />
 
       <div className={`flex-1 overflow-y-auto space-y-3 pr-1 ${compact ? "max-h-[340px]" : "max-h-[520px]"}`}>
