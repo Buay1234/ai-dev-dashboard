@@ -2,7 +2,7 @@
 
 
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 
 import ActivityLog from "./components/ActivityLog";
@@ -159,6 +159,37 @@ export default function Home() {
 
   const testExtract = () => console.log(extractFiles(zoroResult));
 
+  const [officeZoom, setOfficeZoom] = useState(1);
+  const [officeFullscreen, setOfficeFullscreen] = useState(false);
+
+  const toggleOfficeFullscreen = useCallback(() => {
+    setOfficeFullscreen((prev) => !prev);
+  }, []);
+
+  useEffect(() => {
+    if (!officeFullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOfficeFullscreen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [officeFullscreen]);
+
+  const officeFloorProps = {
+    ...agentStatusProps,
+    progress,
+    loading,
+    latestMessages,
+    zoom: officeZoom,
+    onZoomChange: setOfficeZoom,
+    isFullscreen: officeFullscreen,
+    onToggleFullscreen: toggleOfficeFullscreen,
+  };
+
 
 
   return (
@@ -197,7 +228,7 @@ export default function Home() {
 
 
 
-      <main className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+      <main className="relative mx-auto max-w-[1800px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
 
         <motion.div
 
@@ -323,52 +354,41 @@ export default function Home() {
 
             id="company-floor-heading"
 
-            title="Software House Floor"
+            title="Visual AI Office"
 
-            description="AI thinking stream · live office simulation · V22"
+            description="Live agent simulation · focus layout · V22.1"
 
           />
 
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-
-            <div className="xl:col-span-5 space-y-6">
-
-              <CompanyFloor
-                {...agentStatusProps}
-                progress={progress}
-                loading={loading}
-                latestMessages={latestMessages}
-              />
-
-              <AgentRoster
-                {...agentStatusProps}
-                latestMessages={latestMessages}
-              />
-
+          {officeFullscreen ? (
+            <div className="fixed inset-0 z-50 flex flex-col bg-surface-0 p-4 pt-20">
+              <CompanyFloor {...officeFloorProps} />
             </div>
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 xl:gap-5">
+              <div className="xl:col-span-9 space-y-4">
+                <CompanyFloor {...officeFloorProps} />
+                <AgentRoster
+                  {...agentStatusProps}
+                  latestMessages={latestMessages}
+                />
+                <MissionTimeline {...agentStatusProps} messages={messages} />
+              </div>
 
-            <div className="xl:col-span-4">
-
-              <ThinkingPanel
-                thoughts={thoughts}
-                progress={progress}
-                artifactSteps={artifactSteps}
-                {...agentStatusProps}
-              />
-
+              <aside className="xl:col-span-3 space-y-4 xl:sticky xl:top-24 xl:self-start">
+                <ThinkingPanel
+                  thoughts={thoughts}
+                  progress={progress}
+                  artifactSteps={artifactSteps}
+                  compact
+                  {...agentStatusProps}
+                />
+                <ActivityLog logs={logs} messages={messages} compact />
+              </aside>
             </div>
+          )}
 
-            <div className="xl:col-span-3 space-y-6">
-
-              <ActivityLog logs={logs} messages={messages} />
-
-            </div>
-
-          </div>
-
-          <div className="mt-6 space-y-6">
-
-            <MissionTimeline {...agentStatusProps} messages={messages} />
+          <div className="mt-6">
 
             <DeliverablesPanel
               bundle={artifactBundle}

@@ -14,6 +14,7 @@ type Props = {
   currentAgent: string;
   progress: number;
   artifactSteps?: ArtifactProgressStep[];
+  compact?: boolean;
 } & AgentStatusProps;
 
 const STATUS_COLORS: Record<string, string> = {
@@ -48,6 +49,7 @@ export default function ThinkingPanel({
   frankyStatus,
   usoppStatus,
   artifactSteps = [],
+  compact = false,
 }: Props) {
   const statusMap: Record<string, string> = {
     Robin: robinStatus,
@@ -60,13 +62,13 @@ export default function ThinkingPanel({
   const sorted = sortThoughts(thoughts);
 
   return (
-    <Card padding="md" className="flex h-full min-h-[320px] flex-col border-cyan-500/20 bg-slate-950/80">
+    <Card padding="md" className={`flex flex-col border-cyan-500/20 bg-slate-950/80 ${compact ? "min-h-0" : "h-full min-h-[320px]"}`}>
       <CardHeader
         title="AI Thinking Panel"
-        description="Gemini output stream · V22"
+        description="Gemini output stream · V22.1"
       />
 
-      <div className="flex-1 max-h-[520px] overflow-y-auto space-y-3 pr-1">
+      <div className={`flex-1 overflow-y-auto space-y-3 pr-1 ${compact ? "max-h-[340px]" : "max-h-[520px]"}`}>
         <AnimatePresence initial={false}>
           {sorted.map((thought) => {
             const agent = agentConfigFor(thought.agent);

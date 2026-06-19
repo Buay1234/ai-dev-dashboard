@@ -12,10 +12,10 @@ export function spriteBoxFromHeight(height: number) {
   };
 }
 
-/** Pixel map agents — V12.1 placement (48×72 max, aspect preserved) */
+/** Pixel map agents — V22.1 focus layout (56×84, scales with zoom) */
 export const PIXEL_AGENT = {
-  width: 48,
-  maxHeight: 72,
+  width: 56,
+  maxHeight: 84,
 } as const;
 
 /** @deprecated use PIXEL_AGENT for pixel simulation */

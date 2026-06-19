@@ -28,7 +28,7 @@ export default function MissionTimeline({ messages = [], ...props }: Props) {
     <Card padding="md">
       <CardHeader
         title="Workflow Timeline"
-        description="Agent dialogue and live mission progress · V22"
+        description="Agent workflow · V22.1"
       />
 
       <div className="relative flex flex-col">

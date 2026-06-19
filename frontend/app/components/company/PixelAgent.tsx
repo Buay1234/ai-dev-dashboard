@@ -157,7 +157,7 @@ function PixelAgent({
       }}
       transition={{
         duration: STEP_MS / 1000,
-        ease: "linear",
+        ease: "easeInOut",
       }}
       style={{
         willChange: "left, top",
@@ -174,7 +174,7 @@ function PixelAgent({
       >
         {latestMessage && isCurrent && (
           <div
-            className="absolute -top-12 left-1/2 z-20 max-w-[120px] -translate-x-1/2 whitespace-normal rounded-lg border border-cyan-500/40 bg-black/80 px-2 py-1 text-center text-[7px] leading-tight text-white"
+            className="absolute -top-14 left-1/2 z-20 max-w-[140px] -translate-x-1/2 whitespace-normal rounded-lg border border-cyan-500/50 bg-black/85 px-2.5 py-1.5 text-center text-[9px] leading-snug text-white shadow-lg"
             style={{ imageRendering: "pixelated" }}
           >
             {latestMessage}
@@ -183,7 +183,7 @@ function PixelAgent({
 
         {isCurrent && (
           <span
-            className="absolute -top-4 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded border px-1 py-px text-[7px] font-mono uppercase tracking-wider text-yellow-300"
+            className="absolute -top-5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded border px-1.5 py-0.5 text-[8px] font-mono uppercase tracking-wider text-yellow-300"
             style={{
               borderColor: `${themeStyle.glowRgb}88`,
               background: `${themeStyle.glowRgb}33`,
@@ -195,11 +195,20 @@ function PixelAgent({
         )}
 
         <span
-          className="absolute -top-2.5 left-1/2 z-10 -translate-x-1/2 text-[7px] font-mono uppercase tracking-wider text-cyan-400/70"
+          className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-semibold font-mono uppercase tracking-wider text-cyan-300"
           style={{ imageRendering: "pixelated" }}
         >
           {agentName}
         </span>
+
+        {isWalking && (
+          <motion.span
+            className="absolute -bottom-1 left-1/2 z-0 size-2 -translate-x-1/2 rounded-full border border-cyan-400/60 bg-cyan-400/30"
+            animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0.2, 0.6] }}
+            transition={{ duration: 0.5, repeat: Infinity }}
+            aria-hidden
+          />
+        )}
 
         <div
           className="relative flex items-end justify-center"

@@ -5,17 +5,18 @@ import type { AgentMessage } from "@/app/types/conversation";
 type Props = {
   logs: string[];
   messages: AgentMessage[];
+  compact?: boolean;
 };
 
-export default function ActivityLog({ logs, messages }: Props) {
+export default function ActivityLog({ logs, messages, compact = false }: Props) {
   return (
     <Card padding="md">
       <CardHeader
         title="Activity Log"
-        description="Gemini reasoning · V22"
+        description="Gemini reasoning · V22.1"
       />
       <div
-        className="max-h-80 overflow-y-auto rounded-lg border border-border-subtle bg-surface-1"
+        className={`overflow-y-auto rounded-lg border border-border-subtle bg-surface-1 ${compact ? "max-h-52" : "max-h-80"}`}
         role="log"
         aria-live="polite"
         aria-relevant="additions"
