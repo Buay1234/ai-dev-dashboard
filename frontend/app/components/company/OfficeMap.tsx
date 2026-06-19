@@ -60,7 +60,7 @@ function OfficeMap({
         <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-cyan-400/80">
-              Visual AI Office · V23
+              Visual AI Office · V24
             </p>
             <h2 className="text-base sm:text-lg font-bold text-zinc-100 tracking-tight">
               Focus Layout · Live Simulation

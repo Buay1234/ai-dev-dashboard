@@ -9,6 +9,8 @@ import ActivityLog from "./components/ActivityLog";
 import ThinkingPanel from "./components/ThinkingPanel";
 import DeliverablesPanel from "./components/DeliverablesPanel";
 import GeneratedFilesPanel from "./components/GeneratedFilesPanel";
+import DatabaseStatusPanel from "./components/DatabaseStatusPanel";
+import MigrationProgressPanel from "./components/MigrationProgressPanel";
 
 import DashboardStats from "./components/DashboardStats";
 
@@ -103,7 +105,13 @@ export default function Home() {
 
     projectBundle,
 
+    databaseWorkflow,
+
+    migrationSteps,
+
     artifactSteps,
+
+    simulateMigrationApply,
 
     startMission,
 
@@ -362,7 +370,7 @@ export default function Home() {
 
             title="Visual AI Office"
 
-            description="Live agent simulation · V23 database generator"
+            description="Live agent simulation · V24 EF migration runner"
 
           />
 
@@ -396,6 +404,17 @@ export default function Home() {
 
           <div className="mt-6 space-y-6">
 
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <DatabaseStatusPanel
+                workflow={databaseWorkflow}
+                onSimulateApply={simulateMigrationApply}
+              />
+              <MigrationProgressPanel
+                steps={migrationSteps}
+                preview={databaseWorkflow?.preview}
+              />
+            </div>
+
             <GeneratedFilesPanel
               project={projectBundle}
               artifactBundle={artifactBundle}
@@ -404,6 +423,7 @@ export default function Home() {
             <DeliverablesPanel
               bundle={artifactBundle}
               history={artifactHistory}
+              migrationArtifacts={projectBundle?.migrationArtifacts}
             />
 
           </div>

@@ -13,6 +13,8 @@ import type { AgentWorkflowResult } from "@/lib/agents/types";
 import type { AgentStatus } from "@/lib/types/agent-results";
 import type { ArtifactBundle, ArtifactProgressStep } from "@/app/types/artifacts";
 import type { GeneratedProjectBundle } from "@/lib/project-generator/types";
+import type { DatabaseWorkflowState, MigrationProgressStep } from "@/lib/database/database-status";
+import { simulateMigrationApplied } from "@/lib/database/database-service";
 import {
   clearArtifactStore,
   getArtifactProgressSteps,
@@ -71,6 +73,8 @@ export function useMission() {
   const [artifactBundle, setArtifactBundle] = useState<ArtifactBundle | null>(null);
   const [artifactHistory, setArtifactHistory] = useState<ArtifactBundle[]>([]);
   const [projectBundle, setProjectBundle] = useState<GeneratedProjectBundle | null>(null);
+  const [databaseWorkflow, setDatabaseWorkflow] = useState<DatabaseWorkflowState | null>(null);
+  const [migrationSteps, setMigrationSteps] = useState<MigrationProgressStep[]>([]);
   const [artifactSteps, setArtifactSteps] = useState<ArtifactProgressStep[]>([]);
 
   const setThought = useCallback((entry: AgentThought) => {
@@ -106,6 +110,8 @@ export function useMission() {
       setThoughts(STANDBY_THOUGHTS);
       setArtifactBundle(null);
       setProjectBundle(null);
+      setDatabaseWorkflow(null);
+      setMigrationSteps([]);
       setArtifactSteps([]);
       clearArtifactStore();
       setRobinResult("");
@@ -325,12 +331,12 @@ export function useMission() {
         createAgentThought(
           "System",
           "Generating",
-          ["Extracting entities", "Building EF Core project", "Generating CRUD APIs"],
-          "V23 project generation",
+          ["Franky: DbContext", "Franky: Entity Configurations", "Franky: EF Migrations"],
+          "V24 migration pipeline",
           92
         )
       );
-      addLog("Project Generation Started — V23");
+      addLog("Project Generation Started — V24 EF Migration Runner");
 
       const { bundle, project } = runArtifactGeneration(
         {
@@ -356,8 +362,14 @@ export function useMission() {
         addLog(`${file.agent} generated ${file.fileName}`);
       }
 
+      for (const ma of project.migrationArtifacts) {
+        addMessage("Franky", `generated ${ma.name}`);
+      }
+
       setArtifactBundle(bundle);
       setProjectBundle(project);
+      setDatabaseWorkflow(project.databaseWorkflow);
+      setMigrationSteps(project.databaseWorkflow.progressSteps);
       setArtifactHistory((prev) => [bundle, ...prev]);
       setArtifactSteps([
         ...docSteps.map((s) => ({ ...s, done: true })),
@@ -370,12 +382,15 @@ export function useMission() {
           "Generating",
           [
             ...codeSteps.map((s) => `${s.label} ✓`),
-            "Project ZIP ready",
+            "Pending Migration — run dotnet ef database update",
           ],
-          "EF Core project generated",
+          "EF Core migration ready",
           98
         )
       );
+
+      addMessage("Franky", "DbContext and InitialCreate migration generated.");
+      addMessage("System", "Database status: Pending Migration");
 
       setProjectCount((prev) => prev + 1);
       setSuccessCount((prev) => prev + 1);
@@ -394,7 +409,7 @@ export function useMission() {
 
       addMessage("System", "All agents completed tasks. Moving to Meeting Room.");
       addMessage("System", "Project Deliverables Ready");
-      addMessage("System", "EF Core source project generated — export ZIP from Generated Files Panel");
+      addMessage("System", "EF Core project ready for Visual Studio 2022");
 
       setRequirement("");
     } catch (error) {
@@ -409,6 +424,16 @@ export function useMission() {
       setLoading(false);
     }
   }, [requirement, addLog, addMessage, setThought]);
+
+  const simulateMigrationApply = useCallback(() => {
+    setDatabaseWorkflow((prev) => {
+      if (!prev) return prev;
+      const next = simulateMigrationApplied(prev);
+      addLog("Migration Applied — dotnet ef database update (simulated)");
+      addMessage("System", "Database status: Migration Applied");
+      return next;
+    });
+  }, [addLog, addMessage]);
 
   return {
     requirement,
@@ -435,7 +460,10 @@ export function useMission() {
     artifactBundle,
     artifactHistory,
     projectBundle,
+    databaseWorkflow,
+    migrationSteps,
     artifactSteps,
+    simulateMigrationApply,
     startMission,
   };
 }

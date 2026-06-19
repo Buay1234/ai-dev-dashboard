@@ -14,10 +14,12 @@ import EmptyState from "./ui/EmptyState";
 type Props = {
   bundle: ArtifactBundle | null;
   history: ArtifactBundle[];
+  migrationArtifacts?: ProjectArtifact[];
 };
 
 function artifactIcon(type: string, name: string) {
   if (type === "sql" || name.endsWith(".sql")) return "🗄️";
+  if (type === "csharp" || name.endsWith(".cs")) return "💻";
   if (name.endsWith(".md")) return "📄";
   return "📝";
 }
@@ -30,6 +32,14 @@ function PreviewBody({ artifact }: { artifact: ProjectArtifact }) {
   if (artifact.type === "sql") {
     return (
       <pre className="overflow-x-auto rounded-lg border border-emerald-500/20 bg-slate-950 p-4 text-xs leading-relaxed text-emerald-100 font-mono whitespace-pre-wrap">
+        {artifact.content}
+      </pre>
+    );
+  }
+
+  if (artifact.type === "csharp" || artifact.name.endsWith(".cs")) {
+    return (
+      <pre className="overflow-x-auto rounded-lg border border-violet-500/20 bg-slate-950 p-4 text-xs leading-relaxed text-violet-100 font-mono whitespace-pre-wrap">
         {artifact.content}
       </pre>
     );
@@ -181,10 +191,15 @@ function ArtifactRow({
   );
 }
 
-export default function DeliverablesPanel({ bundle, history }: Props) {
+export default function DeliverablesPanel({
+  bundle,
+  history,
+  migrationArtifacts = [],
+}: Props) {
   const [preview, setPreview] = useState<ProjectArtifact | null>(null);
 
   const artifacts = bundle?.artifacts ?? [];
+  const totalCount = artifacts.length + migrationArtifacts.length;
   const missionCount = history.length;
 
   const grouped = useMemo(() => {
@@ -200,17 +215,17 @@ export default function DeliverablesPanel({ bundle, history }: Props) {
       <Card padding="md" className="border-cyan-500/20">
         <CardHeader
           title="Deliverables Panel"
-          description="Project Artifact Generator · V23"
+          description="EF Core Migration Runner · V24"
           action={
-            bundle ? (
+            bundle || migrationArtifacts.length > 0 ? (
               <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-cyan-300">
-                {artifacts.length} files
+                {totalCount} files
               </span>
             ) : undefined
           }
         />
 
-        {!bundle ? (
+        {!bundle && migrationArtifacts.length === 0 ? (
           <EmptyState
             icon="📦"
             title="No artifacts yet"
@@ -218,10 +233,29 @@ export default function DeliverablesPanel({ bundle, history }: Props) {
           />
         ) : (
           <div className="space-y-6">
-            <p className="text-xs text-text-muted">
-              Generated {formatTimestamp(bundle.generatedAt)}
-              {missionCount > 1 && ` · ${missionCount} missions in history`}
-            </p>
+            {bundle && (
+              <p className="text-xs text-text-muted">
+                Generated {formatTimestamp(bundle.generatedAt)}
+                {missionCount > 1 && ` · ${missionCount} missions in history`}
+              </p>
+            )}
+
+            {migrationArtifacts.length > 0 && (
+              <div>
+                <h3 className="mb-2 text-[10px] font-mono uppercase tracking-widest text-blue-400/80">
+                  Franky · EF Migrations
+                </h3>
+                <ul className="space-y-2">
+                  {migrationArtifacts.map((artifact) => (
+                    <ArtifactRow
+                      key={artifact.id}
+                      artifact={artifact}
+                      onPreview={setPreview}
+                    />
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {grouped.map(({ agent, items }) =>
               items.length > 0 ? (

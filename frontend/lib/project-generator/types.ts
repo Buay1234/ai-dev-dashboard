@@ -24,12 +24,17 @@ export type GeneratedSourceFile = {
   content: string;
 };
 
+import type { DatabaseWorkflowState } from "@/lib/database/database-status";
+import type { ProjectArtifact } from "@/app/types/artifacts";
+
 export type GeneratedProjectBundle = {
   id: string;
   generatedAt: string;
   requirement: string;
   entities: EntityDefinition[];
   sourceFiles: GeneratedSourceFile[];
+  databaseWorkflow: DatabaseWorkflowState;
+  migrationArtifacts: ProjectArtifact[];
 };
 
 export const PROJECT_NAMESPACE = "MyProject";

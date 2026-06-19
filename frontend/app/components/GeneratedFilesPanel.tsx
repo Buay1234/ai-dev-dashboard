@@ -25,7 +25,7 @@ const CATEGORIES: {
 }[] = [
   { key: "entity", title: "Entity Classes", icon: "🧩" },
   { key: "migration", title: "Migrations & SQL", icon: "🗄️" },
-  { key: "infrastructure", title: "DbContext & Repositories", icon: "⚙️" },
+  { key: "infrastructure", title: "DbContext, Configurations & Repos", icon: "⚙️" },
   { key: "controller", title: "Controllers & DTOs", icon: "🌐" },
   { key: "test", title: "Unit Tests", icon: "🧪" },
   { key: "docs", title: "Documentation", icon: "📄" },
@@ -152,7 +152,7 @@ export default function GeneratedFilesPanel({ project, artifactBundle }: Props) 
       <Card padding="md" className="border-violet-500/25">
         <CardHeader
           title="Generated Files Panel"
-          description="Real Database & Migration Generator · V23"
+          description="Real Database & Migration Generator · V24"
           action={
             project ? (
               <button
