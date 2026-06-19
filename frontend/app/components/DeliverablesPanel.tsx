@@ -215,7 +215,7 @@ export default function DeliverablesPanel({
       <Card padding="md" className="border-cyan-500/20">
         <CardHeader
           title="Deliverables Panel"
-          description="EF Core Migration Runner · V24"
+          description="EF Core Migration Runner · V25"
           action={
             bundle || migrationArtifacts.length > 0 ? (
               <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-cyan-300">

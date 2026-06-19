@@ -9,7 +9,9 @@ import ActivityLog from "./components/ActivityLog";
 import ThinkingPanel from "./components/ThinkingPanel";
 import DeliverablesPanel from "./components/DeliverablesPanel";
 import GeneratedFilesPanel from "./components/GeneratedFilesPanel";
-import DatabaseStatusPanel from "./components/DatabaseStatusPanel";
+import DatabasePanel from "./components/DatabasePanel";
+import ExecutionCenterPanel from "./components/ExecutionCenterPanel";
+import ExecutionTimeline from "./components/ExecutionTimeline";
 import MigrationProgressPanel from "./components/MigrationProgressPanel";
 
 import DashboardStats from "./components/DashboardStats";
@@ -109,9 +111,13 @@ export default function Home() {
 
     migrationSteps,
 
-    artifactSteps,
+    executionReport,
 
-    simulateMigrationApply,
+    executionTimeline,
+
+    liveExecutionSteps,
+
+    artifactSteps,
 
     startMission,
 
@@ -370,7 +376,7 @@ export default function Home() {
 
             title="Visual AI Office"
 
-            description="Live agent simulation · V24 EF migration runner"
+            description="VISUAL AI OFFICE · V25 · REAL DATABASE CRUD EXECUTION"
 
           />
 
@@ -404,15 +410,21 @@ export default function Home() {
 
           <div className="mt-6 space-y-6">
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <DatabaseStatusPanel
+            <ExecutionCenterPanel
+              report={executionReport}
+              liveSteps={liveExecutionSteps}
+            />
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <DatabasePanel
+                panelInfo={executionReport?.databasePanel ?? null}
                 workflow={databaseWorkflow}
-                onSimulateApply={simulateMigrationApply}
               />
               <MigrationProgressPanel
                 steps={migrationSteps}
                 preview={databaseWorkflow?.preview}
               />
+              <ExecutionTimeline events={executionTimeline} />
             </div>
 
             <GeneratedFilesPanel

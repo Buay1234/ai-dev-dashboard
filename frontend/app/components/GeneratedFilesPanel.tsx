@@ -152,7 +152,7 @@ export default function GeneratedFilesPanel({ project, artifactBundle }: Props) 
       <Card padding="md" className="border-violet-500/25">
         <CardHeader
           title="Generated Files Panel"
-          description="Real Database & Migration Generator · V24"
+          description="Real Database & Migration Generator · V25"
           action={
             project ? (
               <button

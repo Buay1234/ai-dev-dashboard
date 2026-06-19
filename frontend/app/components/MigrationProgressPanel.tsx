@@ -18,7 +18,7 @@ export default function MigrationProgressPanel({ steps, preview }: Props) {
     <Card padding="md" className="border-blue-500/20">
       <CardHeader
         title="Migration Progress"
-        description="Franky · DbContext & EF Migrations · V24"
+        description="Franky · DbContext & EF Migrations · V25"
         action={
           steps.length > 0 ? (
             <span className="text-[10px] font-mono text-cyan-400">{progress}%</span>

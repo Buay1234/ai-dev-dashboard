@@ -15,6 +15,12 @@ import type { ArtifactBundle, ArtifactProgressStep } from "@/app/types/artifacts
 import type { GeneratedProjectBundle } from "@/lib/project-generator/types";
 import type { DatabaseWorkflowState, MigrationProgressStep } from "@/lib/database/database-status";
 import { simulateMigrationApplied } from "@/lib/database/database-service";
+import type { ExecutionReport, ExecutionTimelineEvent } from "@/lib/execution/execution-types";
+import {
+  runFullExecutionPipeline,
+  upsertExecutionStep,
+} from "@/lib/execution";
+import type { ExecutionStep } from "@/lib/execution/execution-types";
 import {
   clearArtifactStore,
   getArtifactProgressSteps,
@@ -75,6 +81,9 @@ export function useMission() {
   const [projectBundle, setProjectBundle] = useState<GeneratedProjectBundle | null>(null);
   const [databaseWorkflow, setDatabaseWorkflow] = useState<DatabaseWorkflowState | null>(null);
   const [migrationSteps, setMigrationSteps] = useState<MigrationProgressStep[]>([]);
+  const [executionReport, setExecutionReport] = useState<ExecutionReport | null>(null);
+  const [executionTimeline, setExecutionTimeline] = useState<ExecutionTimelineEvent[]>([]);
+  const [liveExecutionSteps, setLiveExecutionSteps] = useState<ExecutionStep[]>([]);
   const [artifactSteps, setArtifactSteps] = useState<ArtifactProgressStep[]>([]);
 
   const setThought = useCallback((entry: AgentThought) => {
@@ -112,6 +121,9 @@ export function useMission() {
       setProjectBundle(null);
       setDatabaseWorkflow(null);
       setMigrationSteps([]);
+      setExecutionReport(null);
+      setExecutionTimeline([]);
+      setLiveExecutionSteps([]);
       setArtifactSteps([]);
       clearArtifactStore();
       setRobinResult("");
@@ -332,11 +344,11 @@ export function useMission() {
           "System",
           "Generating",
           ["Franky: DbContext", "Franky: Entity Configurations", "Franky: EF Migrations"],
-          "V24 migration pipeline",
+          "V25 execution pipeline",
           92
         )
       );
-      addLog("Project Generation Started — V24 EF Migration Runner");
+      addLog("Project Generation Started — V25 CRUD Execution");
 
       const { bundle, project } = runArtifactGeneration(
         {
@@ -376,21 +388,64 @@ export function useMission() {
         ...codeSteps.map((s) => ({ id: s.id, label: s.label, done: s.done })),
       ]);
 
+      setCurrentAgent("Usopp");
+      setThought(
+        createAgentThought(
+          "Usopp",
+          "Testing",
+          ["CRUD validation", "Unit test execution", "dotnet test"],
+          "V25 execution center",
+          94
+        )
+      );
+      addLog("Usopp Started — CRUD & unit test execution");
+
+      setLiveExecutionSteps([]);
+      setExecutionTimeline([]);
+
+      const execReport = await runFullExecutionPipeline(project, (step, evt) => {
+        setLiveExecutionSteps((prev) => upsertExecutionStep(prev, step));
+        setExecutionTimeline((prev) => [...prev, evt]);
+        addLog(`${step.agent ?? "System"}: ${step.label} — ${step.status}`);
+      });
+
+      setExecutionReport(execReport);
+      setLiveExecutionSteps(execReport.steps);
+
+      if (
+        execReport.steps.find((s) => s.id === "dotnet-ef-update")?.status ===
+        "success"
+      ) {
+        setDatabaseWorkflow((prev) =>
+          prev ? simulateMigrationApplied(prev) : prev
+        );
+      }
+
+      addMessage(
+        "Usopp",
+        `CRUD validation: ${execReport.crudResults.filter((r) => r.overall === "success").length}/${execReport.crudResults.length} entities passed`
+      );
+      addMessage(
+        "Usopp",
+        `Unit tests: ${execReport.testSummary.passed}/${execReport.testSummary.total} passed`
+      );
+
       setThought(
         createAgentThought(
           "System",
           "Generating",
           [
             ...codeSteps.map((s) => `${s.label} ✓`),
-            "Pending Migration — run dotnet ef database update",
+            `Execution: ${execReport.overallStatus}`,
+            "dotnet restore · build · ef update · test ready",
           ],
-          "EF Core migration ready",
+          "V25 execution complete",
           98
         )
       );
 
       addMessage("Franky", "DbContext and InitialCreate migration generated.");
-      addMessage("System", "Database status: Pending Migration");
+      addMessage("System", `Execution status: ${execReport.overallStatus}`);
 
       setProjectCount((prev) => prev + 1);
       setSuccessCount((prev) => prev + 1);
@@ -409,7 +464,7 @@ export function useMission() {
 
       addMessage("System", "All agents completed tasks. Moving to Meeting Room.");
       addMessage("System", "Project Deliverables Ready");
-      addMessage("System", "EF Core project ready for Visual Studio 2022");
+      addMessage("System", "V25 execution complete — export ZIP for Visual Studio 2022");
 
       setRequirement("");
     } catch (error) {
@@ -462,6 +517,9 @@ export function useMission() {
     projectBundle,
     databaseWorkflow,
     migrationSteps,
+    executionReport,
+    executionTimeline,
+    liveExecutionSteps,
     artifactSteps,
     simulateMigrationApply,
     startMission,
