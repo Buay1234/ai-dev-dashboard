@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:codespace": "next dev --hostname 0.0.0.0 --port 3000",
+    "start:codespace": "next start --hostname 0.0.0.0 --port 3000",
     "build": "next build",
     "build:sprites": "node scripts/build-rpg-sprite-sheets.mjs",
     "fix:sprite-alpha": "node scripts/fix-sprite-alpha.mjs",
