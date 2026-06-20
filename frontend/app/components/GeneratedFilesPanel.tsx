@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { GeneratedProjectBundle, GeneratedSourceFile } from "@/lib/project-generator/types";
+import type { GeneratedProjectBundle, GeneratedSourceFile, EntityDefinition } from "@/lib/project-generator/types";
 import { AGENT_THEME_STYLES } from "@/lib/agents/config";
 import {
   copySourceFileContent,
@@ -18,6 +18,10 @@ type Props = {
   artifactBundle?: ArtifactBundle | null;
   exportEnabled?: boolean;
 };
+
+function uniqueEntities(entities: EntityDefinition[]): EntityDefinition[] {
+  return [...new Map(entities.map((e) => [e.name, e])).values()];
+}
 
 const CATEGORIES: {
   key: GeneratedSourceFile["category"];
@@ -149,6 +153,11 @@ export default function GeneratedFilesPanel({
     })).filter((g) => g.files.length > 0);
   }, [project]);
 
+  const entities = useMemo(
+    () => (project ? uniqueEntities(project.entities) : []),
+    [project]
+  );
+
   const codeFileCount =
     project?.sourceFiles.filter((f) => f.language === "csharp").length ?? 0;
 
@@ -193,7 +202,7 @@ export default function GeneratedFilesPanel({
         ) : (
           <div className="space-y-5">
             <div className="flex flex-wrap gap-3 text-xs text-text-muted">
-              <span>{project.entities.length} entities</span>
+              <span>{entities.length} entities</span>
               <span>·</span>
               <span>{codeFileCount} .cs files</span>
               <span>·</span>
@@ -201,9 +210,9 @@ export default function GeneratedFilesPanel({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {project.entities.map((e) => (
+              {entities.map((e, index) => (
                 <span
-                  key={e.name}
+                  key={`${e.name}-${index}`}
                   className="rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-[10px] font-mono text-purple-300"
                 >
                   {e.name}
