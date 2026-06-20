@@ -30,6 +30,7 @@ import {
 } from "@/lib/build-verification";
 import { computeExportState, logExportState } from "@/lib/export-state";
 import { readFetchError } from "@/lib/fetch-error";
+import { fetchAgentWithRetry } from "@/lib/agent-fetch";
 import {
   runRuntimeVerification,
   type RuntimeReport,
@@ -253,7 +254,7 @@ export function useMission() {
 
       addLog("Robin Started — Gemini workflow");
 
-      const robinResponse = await fetch("/api/robin", {
+      const robinResponse = await fetchAgentWithRetry("/api/robin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -303,7 +304,7 @@ export function useMission() {
       );
 
       addLog("Zoro Started — Gemini workflow");
-      const zoroResponse = await fetch("/api/zoro", {
+      const zoroResponse = await fetchAgentWithRetry("/api/zoro", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -316,7 +317,8 @@ export function useMission() {
       addLog("Zoro Completed");
 
       if (!zoroResponse.ok) {
-        throw new Error("zoro Agent Failed");
+        const errorMessage = await readFetchError(zoroResponse, "Zoro");
+        throw new Error(errorMessage);
       }
 
       const zoroData = (await zoroResponse.json()) as AgentApiPayload;
@@ -339,7 +341,7 @@ export function useMission() {
       );
 
       addLog("Nami Started — Gemini workflow");
-      const namiResponse = await fetch("/api/nami", {
+      const namiResponse = await fetchAgentWithRetry("/api/nami", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -352,7 +354,8 @@ export function useMission() {
       addLog("Nami Completed");
 
       if (!namiResponse.ok) {
-        throw new Error("Nami Agent Failed");
+        const errorMessage = await readFetchError(namiResponse, "Nami");
+        throw new Error(errorMessage);
       }
 
       const namiData = (await namiResponse.json()) as AgentApiPayload;
@@ -375,7 +378,7 @@ export function useMission() {
       );
 
       addLog("Franky Started — Gemini workflow");
-      const frankyResponse = await fetch("/api/franky", {
+      const frankyResponse = await fetchAgentWithRetry("/api/franky", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -389,7 +392,8 @@ export function useMission() {
       addLog("Franky Completed");
 
       if (!frankyResponse.ok) {
-        throw new Error("Franky Agent Failed");
+        const errorMessage = await readFetchError(frankyResponse, "Franky");
+        throw new Error(errorMessage);
       }
 
       const frankyData = (await frankyResponse.json()) as AgentApiPayload;
@@ -419,7 +423,7 @@ export function useMission() {
       );
 
       addLog("Usopp Started — Gemini workflow");
-      const usoppResponse = await fetch("/api/usopp", {
+      const usoppResponse = await fetchAgentWithRetry("/api/usopp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -436,7 +440,8 @@ export function useMission() {
       console.log("Usopp OK", usoppResponse.ok);
 
       if (!usoppResponse.ok) {
-        throw new Error("usopp Agent Failed");
+        const errorMessage = await readFetchError(usoppResponse, "Usopp");
+        throw new Error(errorMessage);
       }
 
       const usoppData = (await usoppResponse.json()) as AgentApiPayload;

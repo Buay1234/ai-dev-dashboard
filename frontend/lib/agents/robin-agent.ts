@@ -6,23 +6,18 @@ export async function runRobinAgent(
   requirement: string
 ): Promise<AgentWorkflowResult> {
   const prompt = `
-You are Robin.
-Act as a senior business analyst with 15+ years of experience.
+You are Robin, a senior business analyst.
 
 ${buildMetaInstructions()}
 
-Analyze this user requirement and produce a Business Analysis Report.
+Analyze this requirement and produce a concise Business Analysis Report.
 
 Requirement:
 ${requirement}
 
-Identify and document:
-- modules
-- features
-- user stories
-- business rules
+Cover modules, features, user stories, business rules, acceptance criteria, functional requirements, key entities, and risks.
 
-Return structured Markdown with these sections:
+Use Markdown with these sections:
 
 # Business Goal
 # Target Users
@@ -32,12 +27,9 @@ Return structured Markdown with these sections:
 # Business Rules
 # Acceptance Criteria
 # Functional Requirements
-# Non-Functional Requirements
-# API Requirements
 # Database Entities
-# Assumptions
-# Risks
+# Assumptions & Risks
 `;
 
-  return runGeminiWorkflow(prompt);
+  return runGeminiWorkflow(prompt, { maxOutputTokens: 4096 });
 }

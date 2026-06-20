@@ -6,14 +6,22 @@ import { buildMetaInstructions, parseAgentResponse } from "./parse-response";
 import type { AgentWorkflowResult } from "./types";
 import { GEMINI_MODEL } from "./types";
 
+export type GeminiWorkflowOptions = {
+  maxOutputTokens?: number;
+};
+
 export async function runGeminiWorkflow(
-  prompt: string
+  prompt: string,
+  options?: GeminiWorkflowOptions
 ): Promise<AgentWorkflowResult> {
   try {
     getGeminiApiKey();
     const response = await getGeminiClient().models.generateContent({
       model: GEMINI_MODEL,
       contents: prompt,
+      config: {
+        maxOutputTokens: options?.maxOutputTokens ?? 8192,
+      },
     });
 
     const text = response.text ?? "";

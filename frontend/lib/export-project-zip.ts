@@ -3,6 +3,7 @@ import { saveAs } from "file-saver";
 import type { ArtifactBundle } from "@/app/types/artifacts";
 import type { GeneratedProjectBundle } from "@/lib/project-generator/types";
 import { prepareZipExportFiles } from "@/lib/artifacts/artifact-service";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 export async function exportGeneratedProjectZip(
   project: GeneratedProjectBundle,
@@ -35,6 +36,6 @@ export function downloadSourceFile(file: GeneratedProjectBundle["sourceFiles"][0
 
 export async function copySourceFileContent(
   file: GeneratedProjectBundle["sourceFiles"][0]
-): Promise<void> {
-  await navigator.clipboard.writeText(file.content);
+): Promise<boolean> {
+  return copyTextToClipboard(file.content);
 }

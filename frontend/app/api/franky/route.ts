@@ -1,6 +1,8 @@
 import { getErrorMessage } from "@/lib/get-error-message";
 import { runFrankyAgent } from "@/lib/agents/franky-agent";
 
+export const maxDuration = 120;
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();

@@ -1,4 +1,5 @@
 import { saveAs } from "file-saver";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import type { ArtifactBundle, ProjectArtifact } from "@/app/types/artifacts";
 import type { GeneratedProjectBundle } from "@/lib/project-generator/types";
 import {
@@ -87,8 +88,8 @@ export function downloadArtifact(artifact: ProjectArtifact) {
 
 export async function copyArtifactToClipboard(
   artifact: ProjectArtifact
-): Promise<void> {
-  await navigator.clipboard.writeText(artifact.content);
+): Promise<boolean> {
+  return copyTextToClipboard(artifact.content);
 }
 
 /** V23 — prepare flat file list for ZIP export */

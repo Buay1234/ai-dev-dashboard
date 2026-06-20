@@ -89,7 +89,8 @@ function SourceFileRow({
   const theme = AGENT_THEME_STYLES[themeKey];
 
   const handleCopy = useCallback(async () => {
-    await copySourceFileContent(file);
+    const ok = await copySourceFileContent(file);
+    if (!ok) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }, [file]);

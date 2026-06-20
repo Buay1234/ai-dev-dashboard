@@ -136,7 +136,8 @@ function ArtifactRow({
     ];
 
   const handleCopy = useCallback(async () => {
-    await copyArtifactToClipboard(artifact);
+    const ok = await copyArtifactToClipboard(artifact);
+    if (!ok) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }, [artifact]);

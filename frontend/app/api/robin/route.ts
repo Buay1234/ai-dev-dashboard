@@ -2,6 +2,8 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { isGeminiConfigured } from "@/lib/gemini-env";
 import { runRobinAgent } from "@/lib/agents/robin-agent";
 
+export const maxDuration = 120;
+
 export async function POST(req: Request) {
   try {
     if (!isGeminiConfigured()) {
