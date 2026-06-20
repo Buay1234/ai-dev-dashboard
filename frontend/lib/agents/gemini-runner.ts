@@ -1,5 +1,6 @@
 import "server-only";
-import { gemini } from "@/lib/gemini";
+import { getGeminiClient } from "@/lib/gemini";
+import { getGeminiApiKey } from "@/lib/gemini-env";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { buildMetaInstructions, parseAgentResponse } from "./parse-response";
 import type { AgentWorkflowResult } from "./types";
@@ -9,7 +10,8 @@ export async function runGeminiWorkflow(
   prompt: string
 ): Promise<AgentWorkflowResult> {
   try {
-    const response = await gemini.models.generateContent({
+    getGeminiApiKey();
+    const response = await getGeminiClient().models.generateContent({
       model: GEMINI_MODEL,
       contents: prompt,
     });

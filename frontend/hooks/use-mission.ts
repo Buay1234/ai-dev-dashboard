@@ -29,6 +29,7 @@ import {
   type BuildVerificationResult,
 } from "@/lib/build-verification";
 import { computeExportState, logExportState } from "@/lib/export-state";
+import { readFetchError } from "@/lib/fetch-error";
 import {
   runRuntimeVerification,
   type RuntimeReport,
@@ -264,11 +265,15 @@ export function useMission() {
       addLog("Robin Completed");
 
       if (!robinResponse.ok) {
-        const errorText = await robinResponse.text();
+        const errorMessage = await readFetchError(robinResponse, "Robin");
 
-        console.error("Robin API Error:", errorText);
+        console.error("Robin API Error:", errorMessage);
+        addMessage("Robin", errorMessage);
+        addLog(`Robin Failed — ${errorMessage}`);
 
-        throw new Error(errorText);
+        setRobinStatus("Error");
+        setLoading(false);
+        return;
       }
 
       const robinData = (await robinResponse.json()) as AgentApiPayload;
