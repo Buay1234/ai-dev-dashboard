@@ -37,6 +37,26 @@ async function checkDotnetSdk(): Promise<boolean> {
   return result.code === 0;
 }
 
+function isValidSolution(content: string): boolean {
+  return content.includes("Project(") && content.includes("EndProject");
+}
+
+function resolveBuildTarget(files: FilePayload[]): string {
+  const sln = files.find((f) => f.path.endsWith(".sln"));
+  if (sln && isValidSolution(sln.content)) {
+    return path.basename(sln.path);
+  }
+
+  const tests = files.find((f) => f.path.endsWith(".Tests.csproj"));
+  if (tests) return tests.path;
+
+  const api = files.find((f) => f.path.endsWith(".API.csproj"));
+  if (api) return api.path;
+
+  const anyCsproj = files.find((f) => f.path.endsWith(".csproj"));
+  return anyCsproj?.path ?? "";
+}
+
 export async function POST(req: Request) {
   let workDir = "";
 
@@ -69,39 +89,32 @@ export async function POST(req: Request) {
       await fs.writeFile(fullPath, file.content, "utf8");
     }
 
-    const sln = files.find((f) => f.path.endsWith(".sln"));
-    const buildTarget = sln
-      ? path.basename(sln.path)
-      : files.find((f) => f.path.includes(".API") && f.path.endsWith(".csproj"))
-          ?.path ?? "";
+    const buildTarget = resolveBuildTarget(files);
+    const targetArg = buildTarget ? `"${buildTarget.replace(/\//g, path.sep)}"` : "";
 
     let restore: PhaseStatus = "fail";
     let build: PhaseStatus = "fail";
     let tests: PhaseStatus = "fail";
     let combinedOutput = "";
 
-    const restoreResult = await runCommand(
-      workDir,
-      buildTarget ? `dotnet restore "${buildTarget}"` : "dotnet restore"
-    );
+    const restoreCmd = targetArg ? `dotnet restore ${targetArg}` : "dotnet restore";
+    const restoreResult = await runCommand(workDir, restoreCmd);
     combinedOutput += restoreResult.output;
     restore = statusFromCode(restoreResult.code);
 
     if (restore === "pass") {
-      const buildResult = await runCommand(
-        workDir,
-        buildTarget ? `dotnet build "${buildTarget}" --no-restore` : "dotnet build --no-restore"
-      );
+      const buildCmd = targetArg
+        ? `dotnet build ${targetArg} --no-restore`
+        : "dotnet build --no-restore";
+      const buildResult = await runCommand(workDir, buildCmd);
       combinedOutput += "\n" + buildResult.output;
       build = statusFromCode(buildResult.code);
 
       if (build === "pass") {
-        const testResult = await runCommand(
-          workDir,
-          buildTarget
-            ? `dotnet test "${buildTarget}" --no-build --verbosity quiet`
-            : "dotnet test --no-build --verbosity quiet"
-        );
+        const testCmd = targetArg
+          ? `dotnet test ${targetArg} --no-build --verbosity quiet`
+          : "dotnet test --no-build --verbosity quiet";
+        const testResult = await runCommand(workDir, testCmd);
         combinedOutput += "\n" + testResult.output;
         tests = statusFromCode(testResult.code);
       }

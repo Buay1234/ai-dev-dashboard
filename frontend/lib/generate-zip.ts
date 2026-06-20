@@ -5,10 +5,10 @@ import {
   API_CSPROJ,
   APPLICATION_CSPROJ,
   APPSETTINGS_JSON,
+  buildSolutionFile,
   DEFAULT_PROGRAM_CS,
   DOMAIN_CSPROJ,
   INFRASTRUCTURE_CSPROJ,
-  PROJECT_SOLUTION_FILE,
   README_MD,
 } from "@/lib/project-templates";
 
@@ -59,7 +59,7 @@ export async function generateProjectZip(zoroResult: string): Promise<void> {
     console.log("ZIP FILE:", `${path}/${file.name}`);
   });
 
-  zip.file("MyProject.sln", PROJECT_SOLUTION_FILE);
+  zip.file("MyProject.sln", buildSolutionFile());
 
   if (!hasProgram) {
     zip.file("MyProject.API/Program.cs", DEFAULT_PROGRAM_CS);

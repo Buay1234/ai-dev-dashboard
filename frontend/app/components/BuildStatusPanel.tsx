@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { BuildVerificationResult } from "@/lib/build-verification/types";
+import { dedupeFixMessages } from "@/lib/build-verification/auto-fixer";
 import { phaseLabel } from "@/lib/build-verification/types";
 import Card, { CardHeader } from "./ui/Card";
 import EmptyState from "./ui/EmptyState";
@@ -51,6 +52,7 @@ export default function BuildStatusPanel({ result, running }: Props) {
   const tests = result ? phaseLabel(result.tests) : "PENDING";
   const qaScore = result?.qaScore ?? 0;
   const complete = result?.complete ?? false;
+  const displayFixes = result ? dedupeFixMessages(result.errorsFixed) : [];
 
   return (
     <Card padding="md" className="border-yellow-500/25">
@@ -78,13 +80,13 @@ export default function BuildStatusPanel({ result, running }: Props) {
         <PhaseRow label="Tests" status={tests} />
       </div>
 
-      {result && result.errorsFixed.length > 0 && (
+      {displayFixes.length > 0 && (
         <div className="mb-4 rounded-lg border border-border-subtle bg-slate-950/60 p-3">
           <p className="text-[10px] font-mono uppercase tracking-wider text-text-muted mb-2">
             Errors Fixed
           </p>
           <ul className="max-h-32 overflow-y-auto space-y-1">
-            {result.errorsFixed.map((fix, i) => (
+            {displayFixes.map((fix, i) => (
               <motion.li
                 key={`${fix}-${i}`}
                 initial={{ opacity: 0, x: -4 }}

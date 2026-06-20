@@ -1,9 +1,11 @@
 import type { ParsedCompilerError } from "./types";
 
 const ERROR_LINE =
-  /(?:^|\n)(?:.*?\\)?([^(\n]+\.cs)\((\d+),(\d+)\):\s*error\s+(CS\d+):\s*(.+)/gi;
+  /(?:^|\n)(?:.*?\\)?([^(\n]+\.cs)\((\d+),(\d+)\):\s*error\s+(CS\d+|NU\d+|MSB\d+):\s*(.+)/gi;
 
-const SIMPLE_ERROR = /error\s+(CS\d+):\s*(.+)/gi;
+const SIMPLE_ERROR = /error\s+(CS\d+|NU\d+|MSB\d+):\s*(.+)/gi;
+
+const RESTORE_ERROR = /(?:error|ERROR)\s+(NU\d+|MSB\d+):\s*(.+)/gi;
 
 export function parseCompilerOutput(output: string): ParsedCompilerError[] {
   const errors: ParsedCompilerError[] = [];
@@ -38,6 +40,20 @@ export function parseCompilerOutput(output: string): ParsedCompilerError[] {
     }
   }
 
+  if (errors.length === 0) {
+    RESTORE_ERROR.lastIndex = 0;
+    while ((match = RESTORE_ERROR.exec(output)) !== null) {
+      const key = `${match[1]}:${match[2]}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      errors.push({
+        code: match[1],
+        message: match[2].trim(),
+        raw: match[0].trim(),
+      });
+    }
+  }
+
   return errors;
 }
 
@@ -54,16 +70,20 @@ export function inferMissingUsings(message: string): string[] {
   if (/list<|ienumerable|icollection|dictionary|hashset|ireadonlylist/.test(lower)) {
     usings.push("using System.Collections.Generic;");
   }
-  if (/datetime|guid|exception|object|string|int/.test(lower) && !/namespace/.test(lower)) {
+  if (/datetime|guid|exception|console|math/.test(lower) && !/namespace/.test(lower)) {
     usings.push("using System;");
   }
-  if (/actionresult|controllerbase|frombody|httppost|httpget|httpput|httpdelete|iapicontroller/.test(lower)) {
+  if (
+    /actionresult|controllerbase|frombody|httppost|httpget|httpput|httpdelete|iapicontroller|okobjectresult|notfoundresult|createdatactionresult/.test(
+      lower
+    )
+  ) {
     usings.push("using Microsoft.AspNetCore.Mvc;");
   }
   if (/mock<|it\.|mock\.setup/.test(lower)) {
     usings.push("using Moq;");
   }
-  if (/fact|theory|xunit/.test(lower)) {
+  if (/fact|theory|xunit|assert\./.test(lower)) {
     usings.push("using Xunit;");
   }
   if (/dbcontext|entityframeworkcore|dbset|migrationbuilder/.test(lower)) {

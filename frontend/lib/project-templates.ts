@@ -1,6 +1,81 @@
-export const PROJECT_SOLUTION_FILE = `
-    Microsoft Visual Studio Solution File
-    `;
+export const PROJECT_NAMESPACE = "MyProject";
+
+type SolutionProject = {
+  name: string;
+  relativePath: string;
+  guid: string;
+};
+
+const SOLUTION_PROJECTS: SolutionProject[] = [
+  {
+    name: "MyProject.Domain",
+    relativePath: "MyProject.Domain\\MyProject.Domain.csproj",
+    guid: "11111111-1111-1111-1111-111111111101",
+  },
+  {
+    name: "MyProject.Application",
+    relativePath: "MyProject.Application\\MyProject.Application.csproj",
+    guid: "11111111-1111-1111-1111-111111111102",
+  },
+  {
+    name: "MyProject.Infrastructure",
+    relativePath: "MyProject.Infrastructure\\MyProject.Infrastructure.csproj",
+    guid: "11111111-1111-1111-1111-111111111103",
+  },
+  {
+    name: "MyProject.API",
+    relativePath: "MyProject.API\\MyProject.API.csproj",
+    guid: "11111111-1111-1111-1111-111111111104",
+  },
+  {
+    name: "MyProject.Tests",
+    relativePath: "MyProject.Tests\\MyProject.Tests.csproj",
+    guid: "11111111-1111-1111-1111-111111111105",
+  },
+];
+
+export function buildSolutionFile(namespace: string = PROJECT_NAMESPACE): string {
+  const projects = SOLUTION_PROJECTS.map((p) => ({
+    name: p.name.replace("MyProject", namespace),
+    relativePath: p.relativePath.replace(/MyProject/g, namespace),
+    guid: p.guid,
+  }));
+
+  const projectBlocks = projects
+    .map(
+      (p) =>
+        `Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "${p.name}", "${p.relativePath}", "{${p.guid.toUpperCase()}}"\nEndProject`
+    )
+    .join("\n");
+
+  const configBlocks = projects
+    .flatMap((p) => [
+      `\t\t{${p.guid.toUpperCase()}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU`,
+      `\t\t{${p.guid.toUpperCase()}}.Debug|Any CPU.Build.0 = Debug|Any CPU`,
+      `\t\t{${p.guid.toUpperCase()}}.Release|Any CPU.ActiveCfg = Release|Any CPU`,
+      `\t\t{${p.guid.toUpperCase()}}.Release|Any CPU.Build.0 = Release|Any CPU`,
+    ])
+    .join("\n");
+
+  return `Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+${projectBlocks}
+Global
+\tGlobalSection(SolutionConfigurationPlatforms) = preSolution
+\t\tDebug|Any CPU = Debug|Any CPU
+\t\tRelease|Any CPU = Release|Any CPU
+\tEndGlobalSection
+\tGlobalSection(ProjectConfigurationPlatforms) = postSolution
+${configBlocks}
+\tEndGlobalSection
+EndGlobal
+`;
+}
+
+/** @deprecated use buildSolutionFile() */
+export const PROJECT_SOLUTION_FILE = buildSolutionFile();
 
 export const DEFAULT_PROGRAM_CS = `
 var builder =

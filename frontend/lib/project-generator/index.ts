@@ -21,8 +21,8 @@ import {
 } from "./unit-test-generator";
 import {
   APPSETTINGS_JSON,
+  buildSolutionFile,
   DOMAIN_CSPROJ,
-  PROJECT_SOLUTION_FILE,
 } from "@/lib/project-templates";
 
 function generateProgramCs(entities: ReturnType<typeof extractEntities>): GeneratedSourceFile {
@@ -260,7 +260,7 @@ dotnet test ${PROJECT_NAMESPACE}.Tests
       category: "infrastructure",
       agent: "System",
       language: "csharp",
-      content: PROJECT_SOLUTION_FILE.trim(),
+      content: buildSolutionFile(PROJECT_NAMESPACE),
     },
   ];
 

@@ -1,4 +1,5 @@
 import type { GeneratedSourceFile } from "@/lib/project-generator/types";
+import { PROJECT_NAMESPACE } from "@/lib/project-generator/types";
 import type { ParsedCompilerError } from "./types";
 import { inferMissingUsings } from "./error-parser";
 
@@ -17,10 +18,22 @@ const CONTENT_TRIGGERS: { pattern: RegExp; using: string }[] = [
     using: "using System.Collections.Generic;",
   },
   { pattern: /\bDateTime\b|\bGuid\b|\bException\b/, using: "using System;" },
-  { pattern: /\bActionResult\b|\bControllerBase\b|\[Http(Get|Post|Put|Delete)/, using: "using Microsoft.AspNetCore.Mvc;" },
-  { pattern: /\bDbContext\b|\bDbSet<|\bEntityFrameworkCore\b/, using: "using Microsoft.EntityFrameworkCore;" },
-  { pattern: /\bMigrationBuilder\b|\bMigration\b.*\bUp\b/, using: "using Microsoft.EntityFrameworkCore.Migrations;" },
-  { pattern: /\bIEntityTypeConfiguration\b|\bEntityTypeBuilder\b/, using: "using Microsoft.EntityFrameworkCore.Metadata.Builders;" },
+  {
+    pattern: /\bActionResult\b|\bControllerBase\b|\[Http(Get|Post|Put|Delete)/,
+    using: "using Microsoft.AspNetCore.Mvc;",
+  },
+  {
+    pattern: /\bDbContext\b|\bDbSet<|\bEntityFrameworkCore\b/,
+    using: "using Microsoft.EntityFrameworkCore;",
+  },
+  {
+    pattern: /\bMigrationBuilder\b|\bMigration\b.*\bUp\b/,
+    using: "using Microsoft.EntityFrameworkCore.Migrations;",
+  },
+  {
+    pattern: /\bIEntityTypeConfiguration\b|\bEntityTypeBuilder\b/,
+    using: "using Microsoft.EntityFrameworkCore.Metadata.Builders;",
+  },
   { pattern: /\bMock<|\bIt\./, using: "using Moq;" },
   { pattern: /\[Fact\]|\[Theory\]/, using: "using Xunit;" },
 ];
@@ -29,7 +42,7 @@ function ensureUsing(content: string, usingLine: string): {
   content: string;
   fixed: boolean;
 } {
-  if (content.includes(usingLine)) {
+  if (!usingLine || content.includes(usingLine)) {
     return { content, fixed: false };
   }
   const trimmed = usingLine.trim();
@@ -67,7 +80,7 @@ function fixFileUsings(
     if (trigger.pattern.test(content)) {
       const result = ensureUsing(content, trigger.using);
       if (result.fixed) {
-        fixes.push(`Added ${trigger.using} → ${file.fileName}`);
+        fixes.push(formatFixMessage(trigger.using));
         content = result.content;
       }
     }
@@ -76,7 +89,7 @@ function fixFileUsings(
   for (const usingLine of extraUsings) {
     const result = ensureUsing(content, usingLine);
     if (result.fixed) {
-      fixes.push(`Added ${usingLine} → ${file.fileName}`);
+      fixes.push(formatFixMessage(usingLine));
       content = result.content;
     }
   }
@@ -85,6 +98,45 @@ function fixFileUsings(
     file: content === file.content ? file : { ...file, content },
     fixes,
   };
+}
+
+export function formatFixMessage(usingOrRef: string): string {
+  const trimmed = usingOrRef.trim();
+  if (trimmed.startsWith("using ")) {
+    return `Added ${trimmed}`;
+  }
+  return trimmed;
+}
+
+export function dedupeFixMessages(fixes: string[]): string[] {
+  return [...new Set(fixes)];
+}
+
+function inferNamespaceUsings(message: string): string[] {
+  const usings: string[] = [];
+  const typeMatch = message.match(
+    /type or namespace name '([^']+)' could not be found/i
+  );
+  if (!typeMatch) return usings;
+
+  const symbol = typeMatch[1];
+  if (symbol === "AppDbContext") {
+    usings.push(`using ${PROJECT_NAMESPACE}.Infrastructure.Data;`);
+  }
+  if (symbol.endsWith("Controller")) {
+    usings.push(`using ${PROJECT_NAMESPACE}.API.Controllers;`);
+  }
+  if (symbol.endsWith("Repository") || (symbol.startsWith("I") && symbol.endsWith("Repository"))) {
+    usings.push(`using ${PROJECT_NAMESPACE}.Infrastructure.Repositories;`);
+  }
+  if (symbol.endsWith("CreateRequest") || symbol.endsWith("UpdateRequest")) {
+    usings.push(`using ${PROJECT_NAMESPACE}.Application.DTOs;`);
+  }
+  if (/^[A-Z][a-zA-Z]+$/.test(symbol) && !symbol.includes(".")) {
+    usings.push(`using ${PROJECT_NAMESPACE}.Domain.Entities;`);
+  }
+
+  return usings;
 }
 
 export function applyProactiveFixes(files: GeneratedSourceFile[]): {
@@ -97,7 +149,7 @@ export function applyProactiveFixes(files: GeneratedSourceFile[]): {
     allFixes.push(...fixes);
     return updated;
   });
-  return { files: next, fixes: allFixes };
+  return { files: next, fixes: dedupeFixMessages(allFixes) };
 }
 
 export function applyFixesFromErrors(
@@ -108,11 +160,18 @@ export function applyFixesFromErrors(
   let next = [...files];
 
   for (const error of errors) {
-    const extraUsings = inferMissingUsings(`${error.message} ${error.code}`);
+    const extraUsings = [
+      ...inferMissingUsings(`${error.message} ${error.code}`),
+      ...inferNamespaceUsings(error.message),
+    ];
     if (extraUsings.length === 0 && !error.file) continue;
 
     next = next.map((file) => {
-      if (error.file && file.fileName !== error.file && !file.fileName.endsWith(error.file)) {
+      if (
+        error.file &&
+        file.fileName !== error.file &&
+        !file.fileName.endsWith(error.file)
+      ) {
         return file;
       }
       const { file: updated, fixes } = fixFileUsings(file, extraUsings);
@@ -121,7 +180,20 @@ export function applyFixesFromErrors(
     });
   }
 
-  return { files: next, fixes: allFixes };
+  return { files: next, fixes: dedupeFixMessages(allFixes) };
+}
+
+function appendBeforeClosingProject(content: string, block: string): string {
+  if (content.includes(block.trim())) return content;
+  return content.replace("</Project>", `${block}\n\n</Project>`);
+}
+
+function appendToFirstItemGroup(content: string, lines: string): string {
+  if (content.includes(lines.trim().split("\n")[0])) return content;
+  if (content.includes("<ItemGroup>")) {
+    return content.replace("<ItemGroup>", `<ItemGroup>\n${lines}`);
+  }
+  return appendBeforeClosingProject(content, `  <ItemGroup>\n${lines}\n  </ItemGroup>`);
 }
 
 export function ensureProjectReferences(files: GeneratedSourceFile[]): {
@@ -129,40 +201,59 @@ export function ensureProjectReferences(files: GeneratedSourceFile[]): {
   fixes: string[];
 } {
   const fixes: string[] = [];
+  const ns = PROJECT_NAMESPACE;
+
   const next = files.map((file) => {
     if (!file.fileName.endsWith(".csproj")) return file;
 
     let content = file.content;
-    if (
-      file.fileName.includes("Application") &&
-      !content.includes("MyProject.Domain.csproj")
-    ) {
-      content = content.replace(
-        "</Project>",
-        `  <ItemGroup>\n    <ProjectReference Include="..\\MyProject.Domain\\MyProject.Domain.csproj" />\n  </ItemGroup>\n\n</Project>`
+    const name = file.fileName;
+
+    if (name.includes("Application") && !content.includes(`${ns}.Domain.csproj`)) {
+      content = appendBeforeClosingProject(
+        content,
+        `  <ItemGroup>\n    <ProjectReference Include="..\\${ns}.Domain\\${ns}.Domain.csproj" />\n  </ItemGroup>`
       );
-      fixes.push("Added project reference → MyProject.Domain");
+      fixes.push(`Added project reference → ${ns}.Domain`);
     }
-    if (
-      file.fileName.includes("Infrastructure") &&
-      !content.includes("Microsoft.EntityFrameworkCore")
-    ) {
-      if (content.includes("<ItemGroup>")) {
-        content = content.replace(
-          "<ItemGroup>",
-          `<ItemGroup>\n    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />\n    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />`
+
+    if (name.includes("Infrastructure")) {
+      if (!content.includes("Microsoft.EntityFrameworkCore")) {
+        content = appendToFirstItemGroup(
+          content,
+          `    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />\n    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />`
         );
-      } else {
-        content = content.replace(
-          "</Project>",
-          `  <ItemGroup>\n    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />\n    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />\n  </ItemGroup>\n\n</Project>`
-        );
+        fixes.push(`Added EF Core package references → ${ns}.Infrastructure`);
       }
-      fixes.push("Added EF Core package references → Infrastructure.csproj");
+      if (!content.includes(`${ns}.Domain.csproj`)) {
+        content = appendBeforeClosingProject(
+          content,
+          `  <ItemGroup>\n    <ProjectReference Include="..\\${ns}.Domain\\${ns}.Domain.csproj" />\n  </ItemGroup>`
+        );
+        fixes.push(`Added project reference → ${ns}.Domain`);
+      }
+    }
+
+    if (name.includes(".API") && !content.includes(`${ns}.Infrastructure.csproj`)) {
+      if (!content.includes(`${ns}.Application.csproj`)) {
+        content = appendBeforeClosingProject(
+          content,
+          `  <ItemGroup>\n    <ProjectReference Include="..\\${ns}.Application\\${ns}.Application.csproj" />\n  </ItemGroup>`
+        );
+        fixes.push(`Added project reference → ${ns}.Application`);
+      }
+    }
+
+    if (name.includes(".Tests") && !content.includes("Microsoft.NET.Test.Sdk")) {
+      content = appendToFirstItemGroup(
+        content,
+        `    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />\n    <PackageReference Include="xunit" Version="2.9.2" />\n    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />`
+      );
+      fixes.push(`Added test package references → ${ns}.Tests`);
     }
 
     return content === file.content ? file : { ...file, content };
   });
 
-  return { files: next, fixes };
+  return { files: next, fixes: dedupeFixMessages(fixes) };
 }

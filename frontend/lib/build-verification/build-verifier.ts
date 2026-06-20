@@ -2,12 +2,12 @@ import type { GeneratedProjectBundle, GeneratedSourceFile } from "@/lib/project-
 import {
   applyFixesFromErrors,
   applyProactiveFixes,
+  dedupeFixMessages,
   ensureProjectReferences,
 } from "./auto-fixer";
 import type {
   BuildVerificationResult,
   BuildVerifyApiResponse,
-  PhaseStatus,
 } from "./types";
 import {
   MAX_BUILD_RETRIES,
@@ -49,6 +49,10 @@ async function callBuildVerifyApi(
   }
 }
 
+function isValidSolution(content: string): boolean {
+  return content.includes("Project(") && content.includes("EndProject");
+}
+
 /** Static analysis fallback when dotnet SDK or API unavailable */
 function staticFallbackVerify(
   files: GeneratedSourceFile[],
@@ -57,15 +61,18 @@ function staticFallbackVerify(
   const csFiles = files.filter((f) => f.fileName.endsWith(".cs"));
   const hasProgram = files.some((f) => f.fileName === "Program.cs");
   const hasDbContext = files.some((f) => f.fileName === "AppDbContext.cs");
-  const hasTests = files.some((f) => f.fileName.endsWith("Tests.cs"));
-  const hasSln = files.some((f) => f.fileName.endsWith(".sln"));
+  const hasTests = files.some((f) => f.fileName.endsWith(".Tests.csproj"));
+  const sln = files.find((f) => f.fileName.endsWith(".sln"));
+  const hasSln = Boolean(sln && isValidSolution(sln.content));
 
   const structureOk =
-    csFiles.length >= 8 && hasProgram && hasDbContext && hasSln;
+    csFiles.length >= 8 && hasProgram && hasDbContext && hasSln && hasTests;
 
   const testsOk =
     hasTests &&
-    csFiles.some((f) => f.content.includes("[Fact]") && f.content.includes("using Xunit"));
+    csFiles.some(
+      (f) => f.content.includes("[Fact]") && f.content.includes("using Xunit")
+    );
 
   return {
     restore: structureOk ? "pass" : "fail",
@@ -110,14 +117,18 @@ export async function runBuildVerification(
     sdkAvailable: true,
   };
 
+  let lastAttempt = 0;
+
   for (let attempt = 1; attempt <= MAX_BUILD_RETRIES; attempt++) {
+    lastAttempt = attempt;
+
     onProgress?.({
       attempts: attempt,
       maxAttempts: MAX_BUILD_RETRIES,
       restore: "running",
       build: "pending",
       tests: "pending",
-      errorsFixed: [...errorsFixed],
+      errorsFixed: dedupeFixMessages(errorsFixed),
       complete: false,
     });
 
@@ -128,30 +139,31 @@ export async function runBuildVerification(
       restore: lastResult.restore,
       build: lastResult.build,
       tests: lastResult.tests,
-      errorsFixed: [...errorsFixed],
+      errorsFixed: dedupeFixMessages(errorsFixed),
       lastOutput: lastResult.output.slice(0, 2000),
       complete: false,
     });
 
     if (allPass(lastResult)) {
+      const deduped = dedupeFixMessages(errorsFixed);
       const result: BuildVerificationResult = {
         complete: true,
         restore: lastResult.restore,
         build: lastResult.build,
         tests: lastResult.tests,
-        errorsFixed,
+        errorsFixed: deduped,
         qaScore: computeQaScore(
           lastResult.restore,
           lastResult.build,
           lastResult.tests,
           attempt,
-          errorsFixed.length
+          deduped.length
         ),
         attempts: attempt,
         maxAttempts: MAX_BUILD_RETRIES,
         lastOutput: lastResult.output,
       };
-      onProgress?.({ ...result, errorsFixed });
+      onProgress?.({ ...result, errorsFixed: deduped });
       return { result, sourceFiles: files };
     }
 
@@ -162,31 +174,28 @@ export async function runBuildVerification(
 
     files = fixes.files;
     errorsFixed.push(...fixes.fixes);
-
-    const reproactive = applyProactiveFixes(files);
-    files = reproactive.files;
-    errorsFixed.push(...reproactive.fixes.filter((f) => !errorsFixed.includes(f)));
   }
 
+  const deduped = dedupeFixMessages(errorsFixed);
   const result: BuildVerificationResult = {
     complete: allPass(lastResult),
     restore: lastResult.restore,
     build: lastResult.build,
     tests: lastResult.tests,
-    errorsFixed,
+    errorsFixed: deduped,
     qaScore: computeQaScore(
       lastResult.restore,
       lastResult.build,
       lastResult.tests,
-      MAX_BUILD_RETRIES,
-      errorsFixed.length
+      lastAttempt,
+      deduped.length
     ),
-    attempts: MAX_BUILD_RETRIES,
+    attempts: lastAttempt,
     maxAttempts: MAX_BUILD_RETRIES,
     lastOutput: lastResult.output,
   };
 
-  onProgress?.({ ...result, errorsFixed });
+  onProgress?.({ ...result, errorsFixed: deduped });
   return { result, sourceFiles: files };
 }
 
