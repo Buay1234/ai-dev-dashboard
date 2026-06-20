@@ -1,0 +1,36 @@
+{
+  "id": "inventory",
+  "domain": "Inventory",
+  "description": "Stock control, replenishment, and inventory movement tracking.",
+  "entities": [
+    { "name": "InventoryItem", "description": "SKU or stock keeping unit" },
+    { "name": "StockLevel", "description": "Quantity on hand per location" },
+    { "name": "Supplier", "description": "Vendor supplying inventory" },
+    { "name": "PurchaseOrder", "description": "Replenishment order to supplier" },
+    { "name": "StockMovement", "description": "Ledger of inventory adjustments" }
+  ],
+  "relationships": [
+    { "from": "StockLevel", "to": "InventoryItem", "type": "many-to-one", "label": "tracks" },
+    { "from": "PurchaseOrder", "to": "Supplier", "type": "many-to-one", "label": "ordered from" },
+    { "from": "PurchaseOrder", "to": "InventoryItem", "type": "many-to-many", "label": "contains lines for" },
+    { "from": "StockMovement", "to": "InventoryItem", "type": "many-to-one", "label": "adjusts" }
+  ],
+  "statusValues": [
+    { "entity": "PurchaseOrder", "field": "Status", "values": ["Draft", "Submitted", "Approved", "Received", "Cancelled"] },
+    { "entity": "InventoryItem", "field": "Status", "values": ["Active", "Discontinued", "Blocked"] },
+    { "entity": "StockMovement", "field": "Type", "values": ["Receipt", "Issue", "Adjustment", "Transfer"] }
+  ],
+  "businessRules": [
+    "Stock levels cannot fall below configured reorder thresholds without alert",
+    "Every stock movement must record user, timestamp, and quantity delta",
+    "Purchase orders above approval limit require manager authorization",
+    "Negative stock quantities are not permitted except during controlled adjustment"
+  ],
+  "recommendedModules": [
+    "Stock Control",
+    "Reorder Management",
+    "Supplier Catalog",
+    "Stock Movement",
+    "Inventory Reporting"
+  ]
+}

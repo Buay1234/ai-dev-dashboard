@@ -1,0 +1,36 @@
+{
+  "id": "warehouse",
+  "domain": "Warehouse",
+  "description": "Warehouse fulfillment with receiving, storage, picking, and shipping.",
+  "entities": [
+    { "name": "Warehouse", "description": "Physical warehouse facility" },
+    { "name": "StorageBin", "description": "Bin or slot location for inventory" },
+    { "name": "ReceivingOrder", "description": "Inbound shipment receiving document" },
+    { "name": "PickList", "description": "Outbound pick task list" },
+    { "name": "Shipment", "description": "Outbound shipment to customer or store" }
+  ],
+  "relationships": [
+    { "from": "StorageBin", "to": "Warehouse", "type": "many-to-one", "label": "located in" },
+    { "from": "ReceivingOrder", "to": "Warehouse", "type": "many-to-one", "label": "received at" },
+    { "from": "PickList", "to": "Warehouse", "type": "many-to-one", "label": "fulfilled from" },
+    { "from": "Shipment", "to": "PickList", "type": "one-to-one", "label": "generated from" }
+  ],
+  "statusValues": [
+    { "entity": "ReceivingOrder", "field": "Status", "values": ["Scheduled", "InReceiving", "PutawayPending", "Completed"] },
+    { "entity": "PickList", "field": "Status", "values": ["Created", "Picking", "Packed", "Shipped"] },
+    { "entity": "Shipment", "field": "Status", "values": ["Draft", "Dispatched", "InTransit", "Delivered"] }
+  ],
+  "businessRules": [
+    "Received goods must be scanned and validated before putaway confirmation",
+    "Pick lists must reflect real-time bin inventory levels",
+    "Shipments cannot dispatch until pick list is fully packed and verified",
+    "Bin capacity limits must be enforced during putaway"
+  ],
+  "recommendedModules": [
+    "Receiving",
+    "Putaway",
+    "Picking",
+    "Shipping",
+    "Bin Management"
+  ]
+}

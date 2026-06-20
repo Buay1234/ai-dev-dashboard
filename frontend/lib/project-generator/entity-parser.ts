@@ -1,4 +1,7 @@
 import type { EntityDefinition, EntityField } from "./types";
+import type { RequirementAnalysisContract } from "@/lib/requirement-parser";
+import type { ArchitectureContract } from "@/lib/domain-library/types";
+import { isGenericEntity } from "@/lib/requirement-parser/entity-extractor";
 
 const SQL_TO_CSHARP: Record<string, string> = {
   int: "int",
@@ -194,25 +197,63 @@ function inferFromRequirement(requirement: string): string[] {
   return unique.slice(0, 5);
 }
 
+function entitiesFromArchitecture(
+  architecture: ArchitectureContract,
+  requirement: string
+): EntityDefinition[] {
+  const names = architecture.entities.filter(
+    (name) => !isGenericEntity(name, requirement)
+  );
+  if (names.length === 0) return [];
+  return names.map(entityFromName);
+}
+
+function entitiesFromAnalysis(
+  analysis: RequirementAnalysisContract,
+  requirement: string
+): EntityDefinition[] {
+  const names = analysis.entities.filter(
+    (name) => !isGenericEntity(name, requirement)
+  );
+  if (names.length === 0) return [];
+  return names.map(entityFromName);
+}
+
 export function extractEntities(
   robin: string,
   zoro: string,
-  requirement: string
+  requirement: string,
+  analysis?: RequirementAnalysisContract | null,
+  architecture?: ArchitectureContract | null
 ): EntityDefinition[] {
   const fromSql = parseCreateTableBlocks(zoro);
   if (fromSql.length > 0) return fromSql;
 
-  const robinNames = parseRobinEntityNames(robin);
+  if (architecture) {
+    const fromArchitecture = entitiesFromArchitecture(architecture, requirement);
+    if (fromArchitecture.length > 0) return fromArchitecture;
+  }
+
+  if (analysis) {
+    const fromAnalysis = entitiesFromAnalysis(analysis, requirement);
+    if (fromAnalysis.length > 0) return fromAnalysis;
+  }
+
+  const robinNames = parseRobinEntityNames(robin).filter(
+    (name) => !isGenericEntity(name, requirement)
+  );
   if (robinNames.length > 0) {
     return robinNames.map(entityFromName);
   }
 
-  const inferred = inferFromRequirement(requirement);
+  const inferred = inferFromRequirement(requirement).filter(
+    (name) => !isGenericEntity(name, requirement)
+  );
   if (inferred.length > 0) {
     return inferred.map(entityFromName);
   }
 
-  return [entityFromName("ProjectTask")];
+  return [entityFromName("BusinessRecord")];
 }
 
 export { toPascalCase };

@@ -10,6 +10,8 @@ import {
   generateProjectBundle,
   getProjectGenerationSteps,
 } from "@/lib/project-generator";
+import type { RequirementAnalysisContract } from "@/lib/requirement-parser";
+import type { ArchitectureContract } from "@/lib/domain-library/types";
 
 /** In-memory store — V22 docs + V23 source project */
 const bundleHistory: ArtifactBundle[] = [];
@@ -19,10 +21,12 @@ let latestProject: GeneratedProjectBundle | null = null;
 
 export function runArtifactGeneration(
   outputs: AgentOutputs,
-  requirement: string
+  requirement: string,
+  analysis?: RequirementAnalysisContract | null,
+  architecture?: ArchitectureContract | null
 ): { bundle: ArtifactBundle; project: GeneratedProjectBundle } {
   const artifacts = generateProjectArtifacts(outputs);
-  const project = generateProjectBundle(outputs, requirement);
+  const project = generateProjectBundle(outputs, requirement, analysis, architecture);
 
   const bundle: ArtifactBundle = {
     id: `mission-${Date.now()}`,

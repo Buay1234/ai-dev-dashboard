@@ -9,6 +9,14 @@ export type ParsedCompilerError = {
   severity?: "error" | "warning";
 };
 
+export type { CompilerDiagnosticsReport } from "./compiler-diagnostics/types";
+export type { AutoFixReport } from "@/lib/build/fix-report";
+export type { BuildRetryState, BuildRetryStatus } from "@/lib/build/build-attempt";
+
+import type { CompilerDiagnosticsReport } from "./compiler-diagnostics/types";
+import type { AutoFixReport } from "@/lib/build/fix-report";
+import type { BuildRetryState, BuildRetryStatus } from "@/lib/build/build-attempt";
+
 export type BuildVerifyApiResponse = {
   restore: PhaseStatus;
   build: PhaseStatus;
@@ -34,6 +42,10 @@ export type BuildVerificationResult = {
   attempts: number;
   maxAttempts: number;
   lastOutput?: string;
+  compilerAnalysis: CompilerDiagnosticsReport | null;
+  autoFixReport: AutoFixReport | null;
+  buildRetry: BuildRetryState | null;
+  retryStatus: BuildRetryStatus;
 };
 
 export const MAX_BUILD_RETRIES = 5;

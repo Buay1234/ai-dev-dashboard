@@ -6,7 +6,11 @@ export async function POST(req: Request) {
     const body = await req.json();
     const frankyOutput = body.frankyDesign ?? body.apiDesign ?? "";
     const zoroOutput = body.backendDesign ?? body.apiDesign ?? "";
-    const output = await runUsoppAgent(frankyOutput, zoroOutput);
+    const output = await runUsoppAgent(
+      frankyOutput,
+      zoroOutput,
+      body.businessAnalysis
+    );
 
     return Response.json(output);
   } catch (error: unknown) {

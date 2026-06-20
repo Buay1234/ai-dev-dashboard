@@ -6,7 +6,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const output = await runFrankyAgent(
       body.backendDesign,
-      body.frontendDesign
+      body.frontendDesign,
+      body.businessAnalysis
     );
 
     return Response.json(output);

@@ -1,0 +1,36 @@
+{
+  "id": "hr",
+  "domain": "HR",
+  "description": "Human resources with employee records, leave, payroll, and recruitment.",
+  "entities": [
+    { "name": "Employee", "description": "Company employee record" },
+    { "name": "Department", "description": "Organizational department unit" },
+    { "name": "LeaveRequest", "description": "Employee time-off request" },
+    { "name": "PayrollRun", "description": "Payroll processing batch" },
+    { "name": "JobPosition", "description": "Open or filled job role" }
+  ],
+  "relationships": [
+    { "from": "Employee", "to": "Department", "type": "many-to-one", "label": "works in" },
+    { "from": "LeaveRequest", "to": "Employee", "type": "many-to-one", "label": "submitted by" },
+    { "from": "PayrollRun", "to": "Employee", "type": "many-to-many", "label": "includes" },
+    { "from": "JobPosition", "to": "Department", "type": "many-to-one", "label": "belongs to" }
+  ],
+  "statusValues": [
+    { "entity": "Employee", "field": "Status", "values": ["Active", "OnLeave", "Terminated", "Probation"] },
+    { "entity": "LeaveRequest", "field": "Status", "values": ["Pending", "Approved", "Rejected", "Cancelled"] },
+    { "entity": "PayrollRun", "field": "Status", "values": ["Draft", "Processing", "Completed", "Failed"] }
+  ],
+  "businessRules": [
+    "Leave requests require manager approval before balance deduction",
+    "Employee personal data must be restricted to authorized HR roles",
+    "Payroll runs must reconcile totals before final posting",
+    "Terminated employees cannot submit new leave requests"
+  ],
+  "recommendedModules": [
+    "Employee Records",
+    "Leave Management",
+    "Payroll",
+    "Recruitment",
+    "Org Structure"
+  ]
+}

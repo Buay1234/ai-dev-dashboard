@@ -1,0 +1,36 @@
+{
+  "id": "pos",
+  "domain": "POS",
+  "description": "Point of sale retail checkout, payments, and shift management.",
+  "entities": [
+    { "name": "Product", "description": "Sellable product or SKU" },
+    { "name": "SaleTransaction", "description": "Completed or in-progress sale" },
+    { "name": "Payment", "description": "Payment tender for a transaction" },
+    { "name": "Store", "description": "Retail store location" },
+    { "name": "CashierShift", "description": "Cashier work shift with float" }
+  ],
+  "relationships": [
+    { "from": "SaleTransaction", "to": "Store", "type": "many-to-one", "label": "occurs at" },
+    { "from": "SaleTransaction", "to": "CashierShift", "type": "many-to-one", "label": "processed during" },
+    { "from": "Payment", "to": "SaleTransaction", "type": "many-to-one", "label": "settles" },
+    { "from": "SaleTransaction", "to": "Product", "type": "many-to-many", "label": "contains line items for" }
+  ],
+  "statusValues": [
+    { "entity": "SaleTransaction", "field": "Status", "values": ["Open", "Paid", "Voided", "Refunded"] },
+    { "entity": "Payment", "field": "Method", "values": ["Cash", "Card", "MobileWallet", "GiftCard"] },
+    { "entity": "CashierShift", "field": "Status", "values": ["Open", "Closing", "Closed", "Reconciled"] }
+  ],
+  "businessRules": [
+    "Completed sales must generate immutable receipt records",
+    "Cashier shifts must reconcile payments before shift close",
+    "Voided transactions require supervisor authorization",
+    "Refunds cannot exceed original transaction amount"
+  ],
+  "recommendedModules": [
+    "Checkout",
+    "Product Catalog",
+    "Payment Processing",
+    "Shift Management",
+    "Receipt Printing"
+  ]
+}

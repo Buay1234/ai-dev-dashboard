@@ -133,13 +133,13 @@ export default function BuildStatusPanel({ result, running, exportReady = false 
 
       {result && !exportReady && (
         <p className="mt-3 text-[10px] text-amber-400/90 font-mono">
-          Attempt {result.attempts}/{result.maxAttempts} — export requires 0 compiler errors
+          Attempt {result.attempts}/{result.maxAttempts} — export requires 0 compiler errors and runtime verification PASS
         </p>
       )}
 
       {exportReady && (
         <p className="mt-3 text-[10px] text-emerald-400/90 font-mono">
-          dotnet build passed with 0 compiler errors · export enabled
+          Build and runtime verified · export enabled
         </p>
       )}
 

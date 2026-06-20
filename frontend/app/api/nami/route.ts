@@ -4,7 +4,7 @@ import { runNamiAgent } from "@/lib/agents/nami-agent";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const output = await runNamiAgent(body.backendDesign);
+    const output = await runNamiAgent(body.backendDesign, body.businessAnalysis);
 
     return Response.json(output);
   } catch (error: unknown) {

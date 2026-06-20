@@ -1,0 +1,36 @@
+{
+  "id": "crm",
+  "domain": "CRM",
+  "description": "Customer relationship management with leads, pipeline, and account tracking.",
+  "entities": [
+    { "name": "Lead", "description": "Prospective customer opportunity source" },
+    { "name": "Contact", "description": "Individual contact person" },
+    { "name": "Account", "description": "Business account or organization" },
+    { "name": "Opportunity", "description": "Sales deal in pipeline" },
+    { "name": "SalesActivity", "description": "Call, meeting, or follow-up activity" }
+  ],
+  "relationships": [
+    { "from": "Lead", "to": "Contact", "type": "one-to-one", "label": "converts to" },
+    { "from": "Contact", "to": "Account", "type": "many-to-one", "label": "belongs to" },
+    { "from": "Opportunity", "to": "Account", "type": "many-to-one", "label": "owned by" },
+    { "from": "SalesActivity", "to": "Opportunity", "type": "many-to-one", "label": "relates to" }
+  ],
+  "statusValues": [
+    { "entity": "Lead", "field": "Status", "values": ["New", "Contacted", "Qualified", "Converted", "Disqualified"] },
+    { "entity": "Opportunity", "field": "Stage", "values": ["Prospecting", "Proposal", "Negotiation", "ClosedWon", "ClosedLost"] },
+    { "entity": "SalesActivity", "field": "Type", "values": ["Call", "Email", "Meeting", "Demo"] }
+  ],
+  "businessRules": [
+    "Leads must convert to contacts before opportunity creation",
+    "Sales activities must be linked to an account or contact record",
+    "Closed-won opportunities require validated contract value",
+    "Duplicate contacts must be merged before pipeline reporting"
+  ],
+  "recommendedModules": [
+    "Lead Management",
+    "Contact Management",
+    "Sales Pipeline",
+    "Account Management",
+    "Activity Tracking"
+  ]
+}

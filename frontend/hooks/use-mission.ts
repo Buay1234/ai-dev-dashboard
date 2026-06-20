@@ -30,6 +30,24 @@ import {
 } from "@/lib/build-verification";
 import { computeExportState, logExportState } from "@/lib/export-state";
 import {
+  runRuntimeVerification,
+  type RuntimeReport,
+} from "@/lib/runtime";
+import {
+  analyzeRequirement,
+  type RequirementAnalysisContract,
+} from "@/lib/requirement-parser";
+import {
+  buildArchitectureContract,
+  formatArchitectureContractForAgent,
+  type ArchitectureContract,
+} from "@/lib/domain-library";
+import {
+  buildAgentArchitectureContext,
+  generateBusinessArchitecture,
+  type BusinessArchitecturePlan,
+} from "@/lib/architecture";
+import {
   clearArtifactStore,
   getArtifactProgressSteps,
   getProjectGenerationSteps,
@@ -95,6 +113,15 @@ export function useMission() {
   const [buildVerification, setBuildVerification] =
     useState<BuildVerificationResult | null>(null);
   const [buildVerificationRunning, setBuildVerificationRunning] = useState(false);
+  const [runtimeReport, setRuntimeReport] = useState<RuntimeReport | null>(null);
+  const [runtimeVerificationRunning, setRuntimeVerificationRunning] =
+    useState(false);
+  const [requirementAnalysis, setRequirementAnalysis] =
+    useState<RequirementAnalysisContract | null>(null);
+  const [architectureContract, setArchitectureContract] =
+    useState<ArchitectureContract | null>(null);
+  const [businessArchitecturePlan, setBusinessArchitecturePlan] =
+    useState<BusinessArchitecturePlan | null>(null);
   const [artifactSteps, setArtifactSteps] = useState<ArtifactProgressStep[]>([]);
 
   const setThought = useCallback((entry: AgentThought) => {
@@ -137,6 +164,11 @@ export function useMission() {
       setLiveExecutionSteps([]);
       setBuildVerification(null);
       setBuildVerificationRunning(false);
+      setRuntimeReport(null);
+      setRuntimeVerificationRunning(false);
+      setRequirementAnalysis(null);
+      setArchitectureContract(null);
+      setBusinessArchitecturePlan(null);
       setArtifactSteps([]);
       clearArtifactStore();
       setRobinResult("");
@@ -165,6 +197,42 @@ export function useMission() {
         `${new Date().toLocaleString()} - ${requirement}`,
         ...prev,
       ]);
+
+      const analysis = analyzeRequirement(requirement);
+      setRequirementAnalysis(analysis);
+
+      const architecture = buildArchitectureContract(analysis);
+      setArchitectureContract(architecture);
+
+      const architecturePlan = generateBusinessArchitecture(analysis, architecture);
+      setBusinessArchitecturePlan(architecturePlan);
+
+      addLog(
+        `V28 Requirement Parser — domain: ${analysis.domain}, entities: ${analysis.entities.length}, confidence: ${analysis.confidenceScore}%`
+      );
+      addLog(
+        architecture.templateLoaded
+          ? `V29 Domain Library — loaded ${architecture.templateId}.json · ${architecture.entities.length} merged entities`
+          : "V29 Domain Library — no template for domain, using requirement analysis only"
+      );
+      addLog(
+        `V30 Business Architecture — ${architecturePlan.architectureType} · complexity ${architecturePlan.complexityScore} · confidence ${architecturePlan.confidenceScore}%`
+      );
+      addMessage(
+        "System",
+        `Business Analysis — ${analysis.domain} · ${architecture.entities.join(", ")}`
+      );
+      addMessage(
+        "System",
+        `Architecture Plan — ${architecturePlan.architectureType} with ${architecturePlan.patterns.length} patterns`
+      );
+
+      const domainAnalysisPayload = formatArchitectureContractForAgent(architecture);
+      const agentArchitecturePayload = buildAgentArchitectureContext(
+        architecture,
+        architecturePlan,
+        formatArchitectureContractForAgent
+      );
 
       addLog("Robin Started — Gemini workflow");
 
@@ -221,6 +289,7 @@ export function useMission() {
         },
         body: JSON.stringify({
           analysis: robinData.result,
+          businessAnalysis: agentArchitecturePayload,
         }),
       });
       addLog("Zoro Completed");
@@ -256,6 +325,7 @@ export function useMission() {
         },
         body: JSON.stringify({
           backendDesign: zoroData.result,
+          businessAnalysis: agentArchitecturePayload,
         }),
       });
       addLog("Nami Completed");
@@ -292,6 +362,7 @@ export function useMission() {
         body: JSON.stringify({
           backendDesign: zoroData.result,
           frontendDesign: namiData.result,
+          businessAnalysis: domainAnalysisPayload,
         }),
       });
       addLog("Franky Completed");
@@ -335,6 +406,7 @@ export function useMission() {
         body: JSON.stringify({
           frankyDesign: frankyData.result,
           backendDesign: zoroData.result,
+          businessAnalysis: agentArchitecturePayload,
         }),
       });
       addLog("Usopp Completed");
@@ -372,7 +444,9 @@ export function useMission() {
           franky: frankyData.result,
           usopp: usoppData.result,
         },
-        requirement
+        requirement,
+        analysis,
+        architecture
       );
 
       const docSteps = getArtifactProgressSteps(bundle.artifacts);
@@ -414,23 +488,31 @@ export function useMission() {
       addLog("Usopp Started — Build Verification (restore · build · test)");
 
       const { result: buildResult, sourceFiles: verifiedFiles } =
-        await runBuildVerification(project, (partial) => {
-          setBuildVerification((prev) => ({
-            complete: false,
-            restore: "pending",
-            build: "pending",
-            tests: "pending",
-            buildStatus: "FAIL",
-            compilerErrorCount: 0,
-            compilerWarningCount: 0,
-            qaScore: 0,
-            attempts: 0,
-            maxAttempts: 5,
-            ...prev,
-            ...partial,
-            errorsFixed: partial.errorsFixed ?? prev?.errorsFixed ?? [],
-          }));
-        });
+        await runBuildVerification(
+          project,
+          (partial) => {
+            setBuildVerification((prev) => ({
+              complete: false,
+              restore: "pending",
+              build: "pending",
+              tests: "pending",
+              buildStatus: "FAIL",
+              compilerErrorCount: 0,
+              compilerWarningCount: 0,
+              compilerAnalysis: null,
+              autoFixReport: null,
+              buildRetry: null,
+              retryStatus: "RUNNING",
+              qaScore: 0,
+              attempts: 0,
+              maxAttempts: 5,
+              ...prev,
+              ...partial,
+              errorsFixed: partial.errorsFixed ?? prev?.errorsFixed ?? [],
+            }));
+          },
+          addLog
+        );
 
       setBuildVerificationRunning(false);
       setBuildVerification(buildResult);
@@ -448,9 +530,32 @@ export function useMission() {
         "Usopp",
         `V26 Build Integrity — Restore: ${buildResult.restore}, Build: ${buildResult.buildStatus}, Compiler Errors: ${buildResult.compilerErrorCount}, Warnings: ${buildResult.compilerWarningCount}`
       );
+
+      if (buildResult.autoFixReport) {
+        addLog(
+          `Usopp Auto Fix — fixed ${buildResult.autoFixReport.fixedErrors}, remaining ${buildResult.autoFixReport.remainingErrors}, attempt ${buildResult.autoFixReport.attempts}`
+        );
+      }
+
+      if (buildResult.compilerAnalysis) {
+        const top = buildResult.compilerAnalysis.errorGroups[0];
+        addLog(
+          `Usopp Compiler Analysis — ${buildResult.compilerAnalysis.totalErrors} errors, top: ${top?.code ?? "N/A"} (${top?.count ?? 0})`
+        );
+        addMessage(
+          "Usopp",
+          `Root cause: ${buildResult.compilerAnalysis.rootCauses[0]?.rootCause ?? "See Compiler Error Analysis panel"}`
+        );
+      }
+
       addMessage("Usopp", `QA Score: ${buildResult.qaScore}%`);
 
-      if (!buildResult.complete) {
+      if (buildResult.retryStatus === "FAILED") {
+        addMessage(
+          "System",
+          `Build Retry FAILED — ${buildResult.compilerErrorCount} compiler errors remain after ${buildResult.attempts} attempts`
+        );
+      } else if (!buildResult.complete) {
         addMessage(
           "System",
           `Export locked — ${buildResult.compilerErrorCount} compiler error(s) remain after dotnet build`
@@ -471,6 +576,37 @@ export function useMission() {
           94
         )
       );
+
+      let runtimeResult: RuntimeReport | null = null;
+
+      if (buildResult.complete && buildResult.compilerErrorCount === 0) {
+        setRuntimeVerificationRunning(true);
+        addLog("Usopp Started — Runtime Verification (dotnet run · swagger · database · migration)");
+        addMessage("Usopp", "V27 Runtime Verification — validating API startup and infrastructure");
+
+        runtimeResult = await runRuntimeVerification(
+          verifiedProject,
+          (partial) => setRuntimeReport(partial),
+          addLog
+        );
+
+        setRuntimeVerificationRunning(false);
+        setRuntimeReport(runtimeResult);
+
+        addMessage(
+          "Usopp",
+          `Runtime Verification — API: ${runtimeResult.apiStartup ? "PASS" : "FAIL"}, Swagger: ${runtimeResult.swagger ? "PASS" : "FAIL"}, Database: ${runtimeResult.database ? "PASS" : "FAIL"}, Migration: ${runtimeResult.migration ? "PASS" : "FAIL"}`
+        );
+
+        if (!runtimeResult.runtimePassed) {
+          addMessage(
+            "System",
+            "Export locked — runtime verification must pass (API · Swagger · Database · Migration)"
+          );
+        }
+      } else {
+        addLog("Runtime Verification skipped — build did not pass with 0 compiler errors");
+      }
 
       addLog("Usopp Started — CRUD & unit test execution");
 
@@ -529,7 +665,8 @@ export function useMission() {
       const exportStateAtComplete = computeExportState(
         "Completed",
         buildResult,
-        verifiedProject
+        verifiedProject,
+        runtimeResult
       );
       logExportState(exportStateAtComplete);
 
@@ -567,8 +704,13 @@ export function useMission() {
 
   const exportState = useMemo(
     () =>
-      computeExportState(currentAgent, buildVerification, projectBundle),
-    [currentAgent, buildVerification, projectBundle]
+      computeExportState(
+        currentAgent,
+        buildVerification,
+        projectBundle,
+        runtimeReport
+      ),
+    [currentAgent, buildVerification, projectBundle, runtimeReport]
   );
 
   const simulateMigrationApply = useCallback(() => {
@@ -613,6 +755,11 @@ export function useMission() {
     liveExecutionSteps,
     buildVerification,
     buildVerificationRunning,
+    runtimeReport,
+    runtimeVerificationRunning,
+    requirementAnalysis,
+    architectureContract,
+    businessArchitecturePlan,
     exportState,
     canExport: exportState.canExport,
     exportEnabled: exportState.exportEnabled,

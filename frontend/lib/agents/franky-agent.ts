@@ -4,26 +4,36 @@ import type { AgentWorkflowResult } from "./types";
 
 export async function runFrankyAgent(
   zoroOutput: string,
-  namiOutput: string
+  namiOutput: string,
+  businessAnalysis?: string
 ): Promise<AgentWorkflowResult> {
+  const structuredContext = businessAnalysis
+    ? `
+
+Structured Architecture Contract (V29 Domain Knowledge):
+${businessAnalysis}
+`
+    : "";
+
   const prompt = `
 You are Franky.
 Act as a senior full-stack architect.
 
 ${buildMetaInstructions()}
 
-Review the backend and frontend plans and produce an Architecture Review.
+Review the backend and frontend plans against the structured business analysis and produce an Architecture Review.
 
 Backend Plan:
 ${zoroOutput}
 
 Frontend Plan:
 ${namiOutput}
+${structuredContext}
 
 Identify and document:
-- architecture patterns
-- scalability concerns
-- recommended improvements
+- architecture patterns for the detected domain
+- scalability concerns per module
+- recommended improvements honoring business rules
 
 Return structured Markdown with:
 

@@ -14,6 +14,13 @@ import ExecutionCenterPanel from "./components/ExecutionCenterPanel";
 import ExecutionTimeline from "./components/ExecutionTimeline";
 import MigrationProgressPanel from "./components/MigrationProgressPanel";
 import BuildStatusPanel from "./components/BuildStatusPanel";
+import CompilerErrorAnalysisPanel from "./components/CompilerErrorAnalysisPanel";
+import AutoFixReportPanel from "./components/AutoFixReportPanel";
+import BuildRetryProgressPanel from "./components/BuildRetryProgressPanel";
+import RuntimeVerificationPanel from "./components/RuntimeVerificationPanel";
+import BusinessAnalysisPanel from "./components/BusinessAnalysisPanel";
+import DomainKnowledgePanel from "./components/DomainKnowledgePanel";
+import BusinessArchitecturePanel from "./components/BusinessArchitecturePanel";
 
 import DashboardStats from "./components/DashboardStats";
 
@@ -123,6 +130,16 @@ export default function Home() {
     buildVerification,
 
     buildVerificationRunning,
+
+    runtimeReport,
+
+    runtimeVerificationRunning,
+
+    requirementAnalysis,
+
+    architectureContract,
+
+    businessArchitecturePlan,
 
     exportEnabled,
 
@@ -358,6 +375,21 @@ export default function Home() {
 
             </div>
 
+            <BusinessAnalysisPanel
+              analysis={requirementAnalysis}
+              loading={loading && !requirementAnalysis && Boolean(requirement.trim())}
+            />
+
+            <DomainKnowledgePanel
+              contract={architectureContract}
+              loading={loading && !architectureContract && Boolean(requirement.trim())}
+            />
+
+            <BusinessArchitecturePanel
+              plan={businessArchitecturePlan}
+              loading={loading && !businessArchitecturePlan && Boolean(requirement.trim())}
+            />
+
             <ExportToolbar
 
               onExportMarkdown={exportMarkdown}
@@ -435,6 +467,27 @@ export default function Home() {
               result={buildVerification}
               running={buildVerificationRunning}
               exportReady={exportReady}
+            />
+
+            <CompilerErrorAnalysisPanel
+              analysis={buildVerification?.compilerAnalysis ?? null}
+              running={buildVerificationRunning}
+            />
+
+            <AutoFixReportPanel
+              report={buildVerification?.autoFixReport ?? null}
+              running={buildVerificationRunning}
+            />
+
+            <BuildRetryProgressPanel
+              buildRetry={buildVerification?.buildRetry ?? null}
+              running={buildVerificationRunning}
+              compilerAnalysis={buildVerification?.compilerAnalysis ?? null}
+            />
+
+            <RuntimeVerificationPanel
+              report={runtimeReport}
+              running={runtimeVerificationRunning}
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

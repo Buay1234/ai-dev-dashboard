@@ -1,0 +1,35 @@
+{
+  "id": "customer-service",
+  "domain": "Customer Service",
+  "description": "Helpdesk and customer support operations with SLA-driven ticket lifecycle.",
+  "entities": [
+    { "name": "Customer", "description": "End customer receiving support" },
+    { "name": "SupportTicket", "description": "Service request or incident case" },
+    { "name": "Agent", "description": "Support staff handling tickets" },
+    { "name": "ServiceCategory", "description": "Ticket classification and routing" },
+    { "name": "Escalation", "description": "Escalation record when SLA breached" }
+  ],
+  "relationships": [
+    { "from": "SupportTicket", "to": "Customer", "type": "many-to-one", "label": "raised by" },
+    { "from": "SupportTicket", "to": "Agent", "type": "many-to-one", "label": "assigned to" },
+    { "from": "SupportTicket", "to": "ServiceCategory", "type": "many-to-one", "label": "categorized as" },
+    { "from": "Escalation", "to": "SupportTicket", "type": "many-to-one", "label": "escalates" }
+  ],
+  "statusValues": [
+    { "entity": "SupportTicket", "field": "Status", "values": ["Open", "InProgress", "PendingCustomer", "Resolved", "Closed"] },
+    { "entity": "Escalation", "field": "Level", "values": ["L1", "L2", "L3", "Management"] }
+  ],
+  "businessRules": [
+    "Tickets must be assigned to an available agent within the configured SLA window",
+    "Resolved tickets require customer confirmation or auto-close after grace period",
+    "Escalation triggers when SLA breach threshold is reached",
+    "Customer contact history must be retained for audit and repeat-issue detection"
+  ],
+  "recommendedModules": [
+    "Ticket Management",
+    "Customer Profile",
+    "Agent Assignment",
+    "SLA Tracking",
+    "Knowledge Base"
+  ]
+}

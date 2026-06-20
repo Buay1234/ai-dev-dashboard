@@ -4,7 +4,7 @@ import { runZoroAgent } from "@/lib/agents/zoro-agent";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const output = await runZoroAgent(body.analysis);
+    const output = await runZoroAgent(body.analysis, body.businessAnalysis);
 
     return Response.json(output);
   } catch (error: unknown) {

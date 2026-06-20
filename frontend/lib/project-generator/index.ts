@@ -2,6 +2,8 @@ import type { AgentOutputs } from "@/lib/artifacts/artifact-generator";
 import type { GeneratedProjectBundle, GeneratedSourceFile, EntityDefinition } from "./types";
 import { PROJECT_NAMESPACE } from "./types";
 import { extractEntities } from "./entity-parser";
+import type { RequirementAnalysisContract } from "@/lib/requirement-parser";
+import type { ArchitectureContract } from "@/lib/domain-library/types";
 import {
   generateEntityClasses,
   generateRepositories,
@@ -159,9 +161,17 @@ function generateApiCsproj(): GeneratedSourceFile {
 
 export function generateProjectBundle(
   outputs: AgentOutputs,
-  requirement: string
+  requirement: string,
+  analysis?: RequirementAnalysisContract | null,
+  architecture?: ArchitectureContract | null
 ): GeneratedProjectBundle {
-  const entities = extractEntities(outputs.robin, outputs.zoro, requirement);
+  const entities = extractEntities(
+    outputs.robin,
+    outputs.zoro,
+    requirement,
+    analysis,
+    architecture
+  );
   const databaseResult = runDatabaseMigrationWorkflow(entities);
 
   const baseFiles: GeneratedSourceFile[] = [
