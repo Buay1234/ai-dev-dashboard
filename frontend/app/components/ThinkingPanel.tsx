@@ -22,6 +22,8 @@ const STATUS_COLORS: Record<string, string> = {
   Thinking: "text-purple-300 border-purple-500/40 bg-purple-500/15",
   Handoff: "text-violet-300 border-violet-500/40 bg-violet-500/15",
   Developing: "text-emerald-300 border-emerald-500/40 bg-emerald-500/15",
+  Designing: "text-red-300 border-red-500/40 bg-red-500/15",
+  Binding: "text-teal-300 border-teal-500/40 bg-teal-500/15",
   "Building UI": "text-orange-300 border-orange-500/40 bg-orange-500/15",
   Reviewing: "text-blue-300 border-blue-500/40 bg-blue-500/15",
   Testing: "text-yellow-300 border-yellow-500/40 bg-yellow-500/15",
@@ -45,7 +47,9 @@ export default function ThinkingPanel({
   progress,
   robinStatus,
   zoroStatus,
+  sanjiStatus,
   namiStatus,
+  jinbeStatus,
   frankyStatus,
   usoppStatus,
   artifactSteps = [],
@@ -54,7 +58,9 @@ export default function ThinkingPanel({
   const statusMap: Record<string, string> = {
     Robin: robinStatus,
     Zoro: zoroStatus,
+    Sanji: sanjiStatus,
     Nami: namiStatus,
+    Jinbe: jinbeStatus,
     Franky: frankyStatus,
     Usopp: usoppStatus,
   };

@@ -137,6 +137,16 @@ export function inferMissingUsings(message: string): string[] {
     usings.push("using System;");
   }
   if (
+    /definition for 'select'|system\.linq|\.select\(|\.where\(|\.orderby\(/.test(lower)
+  ) {
+    usings.push("using System.Linq;");
+  }
+  if (/webapplication|createbuilder|swaggergen|endpointsapiexplorer/.test(lower)) {
+    usings.push("using Microsoft.AspNetCore.Builder;");
+    usings.push("using Microsoft.Extensions.DependencyInjection;");
+    usings.push("using Microsoft.Extensions.Hosting;");
+  }
+  if (
     /actionresult|controllerbase|frombody|httppost|httpget|httpput|httpdelete|iapicontroller|okobjectresult|notfoundresult|createdatactionresult/.test(
       lower
     )

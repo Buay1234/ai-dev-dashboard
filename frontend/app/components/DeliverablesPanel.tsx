@@ -204,7 +204,7 @@ export default function DeliverablesPanel({
   const missionCount = history.length;
 
   const grouped = useMemo(() => {
-    const order = ["Robin", "Zoro", "Nami", "Franky", "Usopp"];
+    const order = ["Robin", "Zoro", "Sanji", "Nami", "Jinbe", "Franky", "Usopp"];
     return order.map((agent) => ({
       agent,
       items: artifacts.filter((a) => a.agent === agent),

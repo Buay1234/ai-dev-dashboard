@@ -2,6 +2,14 @@ import type { GeneratedSourceFile } from "@/lib/project-generator/types";
 import { PROJECT_NAMESPACE } from "@/lib/project-generator/types";
 import type { ParsedCompilerError } from "./types";
 import { inferMissingUsings } from "./error-parser";
+import {
+  filterUsingsForFile,
+  inferSymbolUsings,
+  isContentTriggerAllowedForFile,
+  isUsingAllowedForFile,
+  sanitizeLayerUsings,
+  stripCrossLayerUsings,
+} from "./layer-boundaries";
 
 const STANDARD_USINGS = [
   "using System;",
@@ -18,6 +26,14 @@ const CONTENT_TRIGGERS: { pattern: RegExp; using: string }[] = [
     using: "using System.Collections.Generic;",
   },
   { pattern: /\bDateTime\b|\bGuid\b|\bException\b/, using: "using System;" },
+  {
+    pattern: /\.Select\(|\.Where\(|\.OrderBy\(|\.Any\(|\.FirstOrDefault\(/,
+    using: "using System.Linq;",
+  },
+  {
+    pattern: /\bWebApplication\b|\bWebApplication\.CreateBuilder\b/,
+    using: "using Microsoft.AspNetCore.Builder;",
+  },
   {
     pattern: /\bActionResult\b|\bControllerBase\b|\[Http(Get|Post|Put|Delete)/,
     using: "using Microsoft.AspNetCore.Mvc;",
@@ -77,6 +93,7 @@ function fixFileUsings(
   const fixes: string[] = [];
 
   for (const trigger of CONTENT_TRIGGERS) {
+    if (!isContentTriggerAllowedForFile(file, trigger.using)) continue;
     if (trigger.pattern.test(content)) {
       const result = ensureUsing(content, trigger.using);
       if (result.fixed) {
@@ -87,6 +104,7 @@ function fixFileUsings(
   }
 
   for (const usingLine of extraUsings) {
+    if (!isUsingAllowedForFile(file, usingLine)) continue;
     const result = ensureUsing(content, usingLine);
     if (result.fixed) {
       fixes.push(formatFixMessage(usingLine));
@@ -113,30 +131,11 @@ export function dedupeFixMessages(fixes: string[]): string[] {
 }
 
 function inferNamespaceUsings(message: string): string[] {
-  const usings: string[] = [];
   const typeMatch = message.match(
     /type or namespace name '([^']+)' could not be found/i
   );
-  if (!typeMatch) return usings;
-
-  const symbol = typeMatch[1];
-  if (symbol === "AppDbContext") {
-    usings.push(`using ${PROJECT_NAMESPACE}.Infrastructure.Data;`);
-  }
-  if (symbol.endsWith("Controller")) {
-    usings.push(`using ${PROJECT_NAMESPACE}.API.Controllers;`);
-  }
-  if (symbol.endsWith("Repository") || (symbol.startsWith("I") && symbol.endsWith("Repository"))) {
-    usings.push(`using ${PROJECT_NAMESPACE}.Infrastructure.Repositories;`);
-  }
-  if (symbol.endsWith("CreateRequest") || symbol.endsWith("UpdateRequest")) {
-    usings.push(`using ${PROJECT_NAMESPACE}.Application.DTOs;`);
-  }
-  if (/^[A-Z][a-zA-Z]+$/.test(symbol) && !symbol.includes(".")) {
-    usings.push(`using ${PROJECT_NAMESPACE}.Domain.Entities;`);
-  }
-
-  return usings;
+  if (!typeMatch) return [];
+  return inferSymbolUsings(typeMatch[1]);
 }
 
 export function applyProactiveFixes(files: GeneratedSourceFile[]): {
@@ -151,7 +150,9 @@ export function applyProactiveFixes(files: GeneratedSourceFile[]): {
   });
   const structural = applyStructuralFixes(withUsings);
   allFixes.push(...structural.fixes);
-  return { files: structural.files, fixes: dedupeFixMessages(allFixes) };
+  const layered = sanitizeLayerUsings(structural.files);
+  allFixes.push(...layered.fixes);
+  return { files: layered.files, fixes: dedupeFixMessages(allFixes) };
 }
 
 const RESERVED_ENTITY_NAMES = new Set([
@@ -265,6 +266,10 @@ export function applyStructuralFixes(files: GeneratedSourceFile[]): {
   next = renamed.files;
   fixes.push(...renamed.fixes);
 
+  const layered = sanitizeLayerUsings(next);
+  next = layered.files;
+  fixes.push(...layered.fixes);
+
   return { files: next, fixes: dedupeFixMessages(fixes) };
 }
 
@@ -282,7 +287,22 @@ export function applyFixesFromErrors(
     ];
     if (extraUsings.length === 0 && !error.file) continue;
 
+    const isCrossLayerNamespaceError =
+      error.code === "CS0234" &&
+      /namespace name '(Application|Infrastructure|API)' does not exist/i.test(
+        error.message
+      );
+
     next = next.map((file) => {
+      if (isCrossLayerNamespaceError) {
+        const stripped = stripCrossLayerUsings(file.content, file);
+        if (stripped.fixed) {
+          allFixes.push(`Removed invalid cross-layer usings → ${file.fileName}`);
+          return { ...file, content: stripped.content };
+        }
+        return file;
+      }
+
       if (
         error.file &&
         file.fileName !== error.file &&
@@ -290,13 +310,20 @@ export function applyFixesFromErrors(
       ) {
         return file;
       }
-      const { file: updated, fixes } = fixFileUsings(file, extraUsings);
+
+      const allowed = filterUsingsForFile(file, extraUsings);
+      if (allowed.length === 0) return file;
+
+      const { file: updated, fixes } = fixFileUsings(file, allowed);
       allFixes.push(...fixes);
       return updated;
     });
   }
 
-  return { files: next, fixes: dedupeFixMessages(allFixes) };
+  const layered = sanitizeLayerUsings(next);
+  allFixes.push(...layered.fixes);
+
+  return { files: layered.files, fixes: dedupeFixMessages(allFixes) };
 }
 
 function appendBeforeClosingProject(content: string, block: string): string {

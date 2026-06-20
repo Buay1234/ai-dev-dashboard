@@ -1,15 +1,46 @@
-import type { EntityDefinition, GeneratedSourceFile } from "./types";
+import type { EntityDefinition, EntityField, GeneratedSourceFile } from "./types";
 import { PROJECT_NAMESPACE } from "./types";
 
 function editableFields(entity: EntityDefinition) {
   return entity.fields.filter((f) => !f.isKey && f.name !== "CreatedAt" && f.name !== "UpdatedAt");
 }
 
+function dtoPropertyInitializer(field: EntityField): string {
+  if (field.csharpType.startsWith("string") && field.isRequired) {
+    return " = string.Empty;";
+  }
+  if (field.csharpType === "Guid" && field.isRequired) {
+    return " = Guid.Empty;";
+  }
+  return "";
+}
+
+function assignInCreateInitializer(field: EntityField): string {
+  const prop = field.name;
+  if (field.csharpType === "Guid" && field.isRequired) {
+    return `            ${prop} = this.${prop} ?? Guid.Empty,`;
+  }
+  return `            ${prop} = this.${prop},`;
+}
+
+function assignOnUpdate(field: EntityField): string {
+  const lhs = `entity.${field.name}`;
+  const rhs = `this.${field.name}`;
+  if (field.csharpType === "Guid" && field.isRequired) {
+    return `        ${lhs} = ${rhs} ?? Guid.Empty;`;
+  }
+  if (field.csharpType.endsWith("?") || !field.isRequired) {
+    return `        if (${rhs} is not null) ${lhs} = ${rhs};`;
+  }
+  return `        ${lhs} = ${rhs};`;
+}
+
 export function generateCrudControllers(
   entities: EntityDefinition[]
 ): GeneratedSourceFile[] {
   return entities.map((entity) => {
-    const content = `using Microsoft.AspNetCore.Mvc;
+    const content = `using System.Linq;
+using Microsoft.AspNetCore.Mvc;
 using ${PROJECT_NAMESPACE}.Application.DTOs;
 using ${PROJECT_NAMESPACE}.Domain.Entities;
 using ${PROJECT_NAMESPACE}.Infrastructure.Repositories;
@@ -92,7 +123,10 @@ export function generateDtoFiles(
     const editable = editableFields(entity);
 
     const responseProps = entity.fields
-      .map((f) => `    public ${f.csharpType} ${f.name} { get; set; }${f.csharpType === "string" && f.isRequired ? " = string.Empty;" : ""}`)
+      .map(
+        (f) =>
+          `    public ${f.csharpType} ${f.name} { get; set; }${dtoPropertyInitializer(f)}`
+      )
       .join("\n");
 
     const responseMap = entity.fields
@@ -115,14 +149,16 @@ ${responseMap}
 `;
 
     const createProps = editable
-      .map((f) => `    public ${f.csharpType.replace("?", "")} ${f.name} { get; set; }${f.csharpType.startsWith("string") ? " = string.Empty;" : ""}`)
+      .map(
+        (f) =>
+          `    public ${f.csharpType} ${f.name} { get; set; }${dtoPropertyInitializer(f)}`
+      )
       .join("\n");
 
-    const createAssign = editable
-      .map((f) => `            ${f.name} = ${f.name},`)
-      .join("\n");
+    const createAssign = editable.map(assignInCreateInitializer).join("\n");
 
-    const create = `using ${PROJECT_NAMESPACE}.Domain.Entities;
+    const create = `using System;
+using ${PROJECT_NAMESPACE}.Domain.Entities;
 
 namespace ${PROJECT_NAMESPACE}.Application.DTOs;
 
@@ -138,14 +174,16 @@ ${createAssign}
 `;
 
     const updateProps = editable
-      .map((f) => `    public ${f.csharpType} ${f.name} { get; set; }${f.csharpType.startsWith("string") ? " = string.Empty;" : ""}`)
+      .map(
+        (f) =>
+          `    public ${f.csharpType} ${f.name} { get; set; }${dtoPropertyInitializer(f)}`
+      )
       .join("\n");
 
-    const updateAssign = editable
-      .map((f) => `        entity.${f.name} = ${f.name};`)
-      .join("\n");
+    const updateAssign = editable.map(assignOnUpdate).join("\n");
 
-    const update = `using ${PROJECT_NAMESPACE}.Domain.Entities;
+    const update = `using System;
+using ${PROJECT_NAMESPACE}.Domain.Entities;
 
 namespace ${PROJECT_NAMESPACE}.Application.DTOs;
 
@@ -192,4 +230,53 @@ ${updateAssign}
   }
 
   return files;
+}
+
+export function generateHealthControllers(): GeneratedSourceFile[] {
+  const weatherForecast = `using System.Linq;
+using Microsoft.AspNetCore.Mvc;
+
+namespace ${PROJECT_NAMESPACE}.API.Controllers;
+
+[ApiController]
+[Route("[controller]")]
+public class WeatherForecastController : ControllerBase
+{
+    private static readonly string[] Summaries =
+    {
+        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+    };
+
+    [HttpGet]
+    public IEnumerable<WeatherForecast> Get()
+    {
+        return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+        {
+            Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+            TemperatureC = Random.Shared.Next(-20, 55),
+            Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+        });
+    }
+}
+
+public class WeatherForecast
+{
+    public DateOnly Date { get; set; }
+    public int TemperatureC { get; set; }
+    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    public string? Summary { get; set; }
+}
+`;
+
+  return [
+    {
+      id: "health-weatherforecast",
+      path: `${PROJECT_NAMESPACE}.API/Controllers`,
+      fileName: "WeatherForecastController.cs",
+      category: "controller",
+      agent: "Franky",
+      language: "csharp",
+      content: weatherForecast,
+    },
+  ];
 }

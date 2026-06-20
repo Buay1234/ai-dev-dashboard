@@ -3,6 +3,11 @@ import { PROJECT_NAMESPACE } from "@/lib/project-generator/types";
 import type { CompilerDiagnosticsReport } from "@/lib/build-verification/compiler-diagnostics/types";
 import type { ParsedCompilerError } from "@/lib/build-verification/types";
 import { inferMissingUsings } from "@/lib/build-verification/error-parser";
+import {
+  filterUsingsForFile,
+  inferSymbolUsings,
+  sanitizeLayerUsings,
+} from "@/lib/build-verification/layer-boundaries";
 
 export type FixRuleResult = {
   files: GeneratedSourceFile[];
@@ -55,21 +60,26 @@ export function applyCs0246Fixes(
   let next = [...files];
 
   for (const error of errors.filter((e) => e.code === "CS0246")) {
-    const usings = inferMissingUsings(error.message);
     const nsMatch = error.message.match(/type or namespace name '([^']+)'/i);
-    if (nsMatch?.[1]?.includes(".")) {
-      usings.push(`using ${nsMatch[1]};`);
-    } else if (nsMatch?.[1]) {
-      usings.push(`using ${PROJECT_NAMESPACE}.Domain.Entities;`);
-      usings.push(`using ${PROJECT_NAMESPACE}.Application.DTOs;`);
-      usings.push(`using ${PROJECT_NAMESPACE}.Infrastructure.Repositories;`);
-    }
+    const symbol = nsMatch?.[1] ?? "";
 
     next = next.map((file) => {
-      if (error.file && file.fileName !== error.file && !file.fileName.endsWith(error.file ?? "")) {
+      if (
+        error.file &&
+        file.fileName !== error.file &&
+        !file.fileName.endsWith(error.file ?? "")
+      ) {
         return file;
       }
       if (!file.fileName.endsWith(".cs")) return file;
+
+      const candidateUsings = [
+        ...inferMissingUsings(error.message),
+        ...(symbol.includes(".") ? [`using ${symbol};`] : []),
+        ...inferSymbolUsings(symbol),
+      ];
+      const usings = filterUsingsForFile(file, candidateUsings);
+      if (usings.length === 0) return file;
 
       let content = file.content;
       for (const usingLine of usings) {
@@ -83,7 +93,33 @@ export function applyCs0246Fixes(
     });
   }
 
-  return { files: next, fixes: [...new Set(fixes)] };
+  const layered = sanitizeLayerUsings(next);
+  fixes.push(...layered.fixes);
+
+  return { files: layered.files, fixes: [...new Set(fixes)] };
+}
+
+/** CS0234 — remove cross-layer namespace usings (e.g. Infrastructure in Application). */
+export function applyCs0234Fixes(
+  files: GeneratedSourceFile[],
+  errors: ParsedCompilerError[]
+): FixRuleResult {
+  const hasCrossLayer = errors.some(
+    (e) =>
+      e.code === "CS0234" &&
+      /namespace name '(Application|Infrastructure|API)' does not exist/i.test(
+        e.message
+      )
+  );
+  if (!hasCrossLayer) {
+    return { files, fixes: [] };
+  }
+
+  const layered = sanitizeLayerUsings(files);
+  return {
+    files: layered.files,
+    fixes: layered.fixes.map((f) => `CS0234: ${f}`),
+  };
 }
 
 /** CS0118 — rename entities conflicting with .NET namespaces */
@@ -302,6 +338,9 @@ export function applyAllFixRules(
 
   const rules: Array<(f: GeneratedSourceFile[], e: ParsedCompilerError[]) => FixRuleResult> = [];
 
+  if (codes.has("CS0234") || analysis?.errorGroups.some((g) => g.code === "CS0234")) {
+    rules.push(applyCs0234Fixes);
+  }
   if (codes.has("CS0246") || analysis?.errorGroups.some((g) => g.code === "CS0246")) {
     rules.push(applyCs0246Fixes);
   }
@@ -328,5 +367,8 @@ export function applyAllFixRules(
     allFixes.push(...result.fixes);
   }
 
-  return { files: next, fixes: [...new Set(allFixes)] };
+  const layered = sanitizeLayerUsings(next);
+  allFixes.push(...layered.fixes);
+
+  return { files: layered.files, fixes: [...new Set(allFixes)] };
 }

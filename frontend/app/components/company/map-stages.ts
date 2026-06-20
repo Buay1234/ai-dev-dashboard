@@ -5,7 +5,9 @@ export type MissionStage =
   | "Reception"
   | "Robin"
   | "Zoro"
+  | "Sanji"
   | "Nami"
+  | "Jinbe"
   | "Franky"
   | "Usopp";
 
@@ -18,7 +20,9 @@ export const STAGE_POSITIONS: Record<MissionStage, { x: number; y: number }> = {
   Reception: { x: 50, y: 12 },
   Robin: { x: 25, y: 41 },
   Zoro: { x: 75, y: 41 },
+  Sanji: { x: 50, y: 52 },
   Nami: { x: 25, y: 63 },
+  Jinbe: { x: 50, y: 70 },
   Franky: { x: 75, y: 63 },
   Usopp: { x: 50, y: 86 },
 };
@@ -27,7 +31,9 @@ export const MISSION_STAGE_ORDER: MissionStage[] = [
   "Reception",
   "Robin",
   "Zoro",
+  "Sanji",
   "Nami",
+  "Jinbe",
   "Franky",
   "Usopp",
 ];

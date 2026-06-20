@@ -9,6 +9,46 @@ import type { DatabaseDesignContract } from "./entity-relationship";
 import { dedupeEntityNames } from "./entity-relationship";
 import { buildErDiagram, planMigrations } from "./migration-planner";
 import { analyzeRelationships } from "./relationship-analyzer";
+import type { EntityDefinition } from "@/lib/project-generator/types";
+
+export function alignDatabaseDesignWithEntities(
+  design: DatabaseDesignContract,
+  entities: EntityDefinition[]
+): DatabaseDesignContract {
+  const names = new Set(entities.map((e) => e.name));
+  const entityList = [...names];
+
+  const relationships = design.relationships.filter(
+    (r) => names.has(r.principalEntity) && names.has(r.dependentEntity)
+  );
+
+  const navigationProperties = design.navigationProperties.filter(
+    (n) => names.has(n.entity) && names.has(n.targetEntity)
+  );
+
+  const foreignKeys = design.foreignKeys.filter(
+    (fk) => names.has(fk.entity) && names.has(fk.referencesEntity)
+  );
+
+  const cascadeRules = resolveCascadeRules(relationships);
+  const fluentConfigurations = generateFluentApiConfigurations(
+    relationships,
+    cascadeRules,
+    navigationProperties
+  );
+
+  return {
+    ...design,
+    entities: entityList,
+    relationships,
+    foreignKeys,
+    navigationProperties,
+    cascadeRules,
+    fluentConfigurations,
+    erDiagram: buildErDiagram(entityList, relationships),
+    migrationPlan: planMigrations(entityList, relationships, foreignKeys),
+  };
+}
 
 export function designDatabase(
   architecture: ArchitectureContract

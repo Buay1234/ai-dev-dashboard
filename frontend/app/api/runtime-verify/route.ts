@@ -8,23 +8,36 @@ import {
   resolveCompilerCounts,
 } from "@/lib/build-verification/error-parser";
 import { PROJECT_NAMESPACE } from "@/lib/project-generator/types";
-import { verifyDatabaseFromCommandOutput } from "@/lib/runtime/database-checker";
 import {
+  buildSqlCmdSelectOneCommand,
+  extractConnectionStringFromPayload,
+  extractExceptionExcerpt,
+  verifyDatabaseSelectOneOutput,
+} from "@/lib/runtime/database-checker";
+import {
+  migrationAddCommand,
   migrationCommand,
   verifyMigrationFromCommandOutput,
 } from "@/lib/runtime/migration-checker";
+import {
+  appendPhase,
+  createEmptyDiagnostics,
+  formatDiagnosticsOutput,
+  STARTUP_TIMEOUT_MS,
+  verifyRuntimeEndpoints,
+} from "@/lib/runtime/runtime-diagnostics";
+import { findFreePort } from "@/lib/runtime/runtime-diagnostics-server";
 import {
   createCheckResult,
   finalizeRuntimeReport,
   type RuntimeReport,
 } from "@/lib/runtime/runtime-report";
-import { verifySwaggerEndpoint } from "@/lib/runtime/swagger-checker";
+
+export const maxDuration = 300;
 
 const execAsync = promisify(exec);
 
 type FilePayload = { path: string; content: string };
-
-const RUNTIME_PORT = 5199;
 
 async function runCommand(cwd: string, command: string, timeoutMs = 180_000) {
   try {
@@ -70,15 +83,23 @@ function sleep(ms: number) {
 async function waitForStartupLog(
   proc: ChildProcess,
   timeoutMs: number
-): Promise<{ started: boolean; output: string }> {
+): Promise<{ started: boolean; output: string; exception?: string }> {
   let output = "";
+  let exception: string | undefined;
+
   const startedPromise = new Promise<boolean>((resolve) => {
     const onData = (chunk: Buffer | string) => {
       output += chunk.toString();
       if (
+        output.includes("Unhandled exception") ||
+        output.includes("Hosting failed to start") ||
+        output.includes("fail: Microsoft.Extensions.Hosting")
+      ) {
+        exception = output.slice(-4000);
+      }
+      if (
         output.includes("Now listening on") ||
-        output.includes("Application started") ||
-        output.includes("Hosting environment")
+        output.includes("Application started")
       ) {
         resolve(true);
       }
@@ -89,22 +110,43 @@ async function waitForStartupLog(
   });
 
   const started = await startedPromise;
-  return { started, output };
+  return { started, output, exception };
 }
 
 function killProcess(proc: ChildProcess | null) {
   if (!proc || proc.killed) return;
   try {
+    if (proc.pid) {
+      spawn("taskkill", ["/PID", String(proc.pid), "/T", "/F"], {
+        shell: true,
+        windowsHide: true,
+        stdio: "ignore",
+      });
+    }
     proc.kill("SIGTERM");
   } catch {
     // ignore
   }
 }
 
+async function regenerateMigrations(
+  workDir: string,
+  connectionString: string
+): Promise<{ code: number; output: string }> {
+  const migrationsDir = path.join(
+    workDir,
+    `${PROJECT_NAMESPACE}.Infrastructure`,
+    "Migrations"
+  );
+  await fs.rm(migrationsDir, { recursive: true, force: true }).catch(() => {});
+  return runCommand(workDir, migrationAddCommand(connectionString), 120_000);
+}
+
 export async function POST(req: Request) {
   let workDir = "";
   let apiProcess: ChildProcess | null = null;
   let combinedOutput = "";
+  const diagnostics = createEmptyDiagnostics();
 
   try {
     const body = await req.json();
@@ -116,6 +158,7 @@ export async function POST(req: Request) {
 
     const sdkAvailable = await checkDotnetSdk();
     if (!sdkAvailable) {
+      appendPhase(diagnostics, "SDK Check", false, "dotnet SDK not available");
       return Response.json(
         finalizeRuntimeReport(
           {
@@ -124,12 +167,17 @@ export async function POST(req: Request) {
             database: createCheckResult("Database Connection", false, "dotnet SDK not available"),
             migration: createCheckResult("Migration Execution", false, "dotnet SDK not available"),
           },
-          { output: "dotnet SDK not found on server", sdkAvailable: false }
+          {
+            output: formatDiagnosticsOutput(diagnostics),
+            sdkAvailable: false,
+            diagnostics,
+          }
         )
       );
     }
 
     workDir = path.join(os.tmpdir(), `ai-runtime-v27-${Date.now()}`);
+    diagnostics.workDir = workDir;
     await fs.mkdir(workDir, { recursive: true });
 
     for (const file of files) {
@@ -141,16 +189,29 @@ export async function POST(req: Request) {
     const slnTarget = resolveSolutionTarget(files);
     const slnArg = `"${slnTarget.replace(/\//g, path.sep)}"`;
     const apiProject = `${PROJECT_NAMESPACE}.API`;
-    const baseUrl = `http://127.0.0.1:${RUNTIME_PORT}`;
+    const port = await findFreePort();
+    const baseUrl = `http://127.0.0.1:${port}`;
+    diagnostics.port = port;
+    diagnostics.baseUrl = baseUrl;
 
     const restoreResult = await runCommand(workDir, `dotnet restore ${slnArg}`);
     combinedOutput += restoreResult.output;
-
-    const buildResult = await runCommand(
-      workDir,
-      `dotnet build ${slnArg} --no-restore`
+    appendPhase(
+      diagnostics,
+      "Restore",
+      restoreResult.code === 0,
+      restoreResult.code === 0 ? "dotnet restore succeeded" : "dotnet restore failed"
     );
+
+    const buildResult = await runCommand(workDir, `dotnet build ${slnArg} --no-restore`);
     combinedOutput += "\n" + buildResult.output;
+    diagnostics.buildOutput = buildResult.output.slice(-4000);
+    appendPhase(
+      diagnostics,
+      "Build",
+      buildResult.code === 0,
+      buildResult.code === 0 ? "dotnet build succeeded" : "dotnet build failed"
+    );
 
     const buildErrors = parseCompilerOutput(buildResult.output);
     const buildCounts = resolveCompilerCounts(buildResult.output, buildErrors, []);
@@ -167,21 +228,112 @@ export async function POST(req: Request) {
             database: createCheckResult("Database Connection", false, "Skipped — build failed"),
             migration: createCheckResult("Migration Execution", false, "Skipped — build failed"),
           },
-          { output: combinedOutput.slice(-12000), sdkAvailable: true }
+          {
+            output: formatDiagnosticsOutput(diagnostics, combinedOutput.slice(-12000)),
+            sdkAvailable: true,
+            diagnostics,
+          }
         )
       );
     }
 
-    const migrationResult = await runCommand(workDir, migrationCommand(), 120_000);
-    combinedOutput += "\n" + migrationResult.output;
+    const connectionString = extractConnectionStringFromPayload(files);
+    if (!connectionString) {
+      appendPhase(
+        diagnostics,
+        "Connection String",
+        false,
+        "DefaultConnection not found in appsettings.json"
+      );
+      return Response.json(
+        finalizeRuntimeReport(
+          {
+            apiStartup: createCheckResult("API Startup", false, "Skipped — no connection string"),
+            swagger: createCheckResult("Swagger Endpoint", false, "Skipped — no connection string"),
+            database: createCheckResult(
+              "Database Connection",
+              false,
+              "DefaultConnection missing in appsettings.json"
+            ),
+            migration: createCheckResult(
+              "Migration Execution",
+              false,
+              "Skipped — DefaultConnection missing in appsettings.json"
+            ),
+          },
+          {
+            output: formatDiagnosticsOutput(diagnostics, combinedOutput.slice(-12000)),
+            sdkAvailable: true,
+            diagnostics,
+          }
+        )
+      );
+    }
 
-    const migrationCheck = verifyMigrationFromCommandOutput(
-      migrationResult.output,
-      migrationResult.code
+    diagnostics.connectionString = connectionString;
+
+    const sqlProbeResult = await runCommand(
+      workDir,
+      buildSqlCmdSelectOneCommand(connectionString),
+      60_000
     );
-    const databaseCheck = verifyDatabaseFromCommandOutput(
-      migrationResult.output,
-      migrationResult.code
+    combinedOutput += "\n" + sqlProbeResult.output;
+    diagnostics.sqlProbeOutput = sqlProbeResult.output.slice(-4000);
+    if (sqlProbeResult.code !== 0) {
+      diagnostics.databaseException = extractExceptionExcerpt(sqlProbeResult.output);
+    }
+
+    let databaseCheck = verifyDatabaseSelectOneOutput(
+      sqlProbeResult.output,
+      sqlProbeResult.code,
+      connectionString
+    );
+    appendPhase(diagnostics, "SQL Probe (SELECT 1)", databaseCheck.passed, databaseCheck.detail);
+
+    const migrationRegen = await regenerateMigrations(workDir, connectionString);
+    combinedOutput += "\n" + migrationRegen.output;
+    appendPhase(
+      diagnostics,
+      "Migration Regeneration",
+      migrationRegen.code === 0,
+      migrationRegen.code === 0
+        ? "dotnet ef migrations add InitialCreate succeeded"
+        : "dotnet ef migrations add failed"
+    );
+
+    const migrationResult =
+      migrationRegen.code === 0
+        ? await runCommand(workDir, migrationCommand(connectionString), 120_000)
+        : { code: 1, output: migrationRegen.output };
+    combinedOutput += "\n" + migrationResult.output;
+    diagnostics.migrationOutput = migrationResult.output.slice(-4000);
+    if (migrationResult.code !== 0) {
+      diagnostics.migrationException = extractExceptionExcerpt(migrationResult.output);
+    }
+
+    const migrationCheck =
+      migrationRegen.code !== 0
+        ? createCheckResult(
+            "Migration Execution",
+            false,
+            `dotnet ef migrations add InitialCreate failed: ${extractExceptionExcerpt(migrationRegen.output, 1200)}`
+          )
+        : verifyMigrationFromCommandOutput(
+            migrationRegen.output + migrationResult.output,
+            migrationResult.code
+          );
+
+    appendPhase(
+      diagnostics,
+      "Migration Update",
+      migrationCheck.passed,
+      migrationCheck.detail
+    );
+    appendPhase(
+      diagnostics,
+      "Database Connection",
+      databaseCheck.passed,
+      databaseCheck.detail
     );
 
     apiProcess = spawn(
@@ -191,27 +343,38 @@ export async function POST(req: Request) {
         cwd: workDir,
         shell: true,
         windowsHide: true,
+        env: {
+          ...process.env,
+          ASPNETCORE_ENVIRONMENT: "Development",
+          DOTNET_ENVIRONMENT: "Development",
+        },
         stdio: ["ignore", "pipe", "pipe"],
       }
     );
 
-    const { started, output: startupOutput } = await waitForStartupLog(
+    const { started, output: startupOutput, exception } = await waitForStartupLog(
       apiProcess,
-      45_000
+      STARTUP_TIMEOUT_MS
     );
     combinedOutput += "\n" + startupOutput;
+    diagnostics.startupOutput = startupOutput.slice(-4000);
 
-    const apiStartupCheck = started
-      ? createCheckResult(
-          "API Startup",
-          true,
-          `API started and listening on ${baseUrl}`
-        )
-      : createCheckResult(
-          "API Startup",
-          false,
-          "API process did not report listening within timeout"
-        );
+    const apiStartupCheck =
+      started && !exception
+        ? createCheckResult(
+            "API Startup",
+            true,
+            `API started and listening on ${baseUrl}`
+          )
+        : createCheckResult(
+            "API Startup",
+            false,
+            exception
+              ? `Startup exception: ${exception.slice(0, 500)}`
+              : `API process did not report listening within ${STARTUP_TIMEOUT_MS / 1000}s`
+          );
+
+    appendPhase(diagnostics, "API Startup", apiStartupCheck.passed, apiStartupCheck.detail);
 
     let swaggerCheck = createCheckResult(
       "Swagger Endpoint",
@@ -219,9 +382,12 @@ export async function POST(req: Request) {
       "Skipped — API did not start"
     );
 
-    if (started) {
-      await sleep(1500);
-      swaggerCheck = await verifySwaggerEndpoint(baseUrl);
+    if (started && !exception) {
+      await sleep(2000);
+      const endpointResult = await verifyRuntimeEndpoints(baseUrl);
+      swaggerCheck = endpointResult.swagger;
+      diagnostics.endpoints = endpointResult.endpoints;
+      appendPhase(diagnostics, "Swagger Endpoint", swaggerCheck.passed, swaggerCheck.detail);
     }
 
     killProcess(apiProcess);
@@ -234,12 +400,17 @@ export async function POST(req: Request) {
         database: databaseCheck,
         migration: migrationCheck,
       },
-      { output: combinedOutput.slice(-12000), sdkAvailable: true }
+      {
+        output: formatDiagnosticsOutput(diagnostics, combinedOutput.slice(-12000)),
+        sdkAvailable: true,
+        diagnostics,
+      }
     );
 
     return Response.json(report);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Runtime verify failed";
+    appendPhase(diagnostics, "Runtime Verify", false, message);
     return Response.json(
       finalizeRuntimeReport(
         {
@@ -248,7 +419,11 @@ export async function POST(req: Request) {
           database: createCheckResult("Database Connection", false, message),
           migration: createCheckResult("Migration Execution", false, message),
         },
-        { output: message, sdkAvailable: true }
+        {
+          output: formatDiagnosticsOutput(diagnostics, message),
+          sdkAvailable: true,
+          diagnostics,
+        }
       ),
       { status: 500 }
     );

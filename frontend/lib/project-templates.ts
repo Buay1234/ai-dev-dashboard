@@ -77,13 +77,20 @@ EndGlobal
 /** @deprecated use buildSolutionFile() */
 export const PROJECT_SOLUTION_FILE = buildSolutionFile();
 
-export const DEFAULT_PROGRAM_CS = `
-var builder =
-    WebApplication.CreateBuilder(args);
+export const DEFAULT_PROGRAM_CS = `using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.UseSwagger();
+app.UseSwaggerUI(c => c.RoutePrefix = "swagger");
 
 app.MapControllers();
 
@@ -96,6 +103,7 @@ export const API_CSPROJ = `
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
 </Project>
@@ -134,12 +142,41 @@ export const INFRASTRUCTURE_CSPROJ = `
 export const APPSETTINGS_JSON = `
 {
   "ConnectionStrings": {
-    "DefaultConnection":
-      "Server=.;Database=MyProjectDb;Trusted_Connection=True;"
+    "DefaultConnection": "Server=.;Database=MyProjectDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true"
   },
   "Logging": {
     "LogLevel": {
       "Default": "Information"
+    }
+  }
+}
+`;
+
+export const APPSETTINGS_DEVELOPMENT_JSON = `
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=.;Database=MyProjectDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  }
+}
+`;
+
+export const LAUNCH_SETTINGS_JSON = `
+{
+  "profiles": {
+    "MyProject.API": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "applicationUrl": "http://localhost:5199",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
     }
   }
 }

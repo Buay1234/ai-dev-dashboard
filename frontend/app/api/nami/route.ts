@@ -6,7 +6,11 @@ export const maxDuration = 120;
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const output = await runNamiAgent(body.backendDesign, body.businessAnalysis);
+    const output = await runNamiAgent(
+      body.backendDesign,
+      body.businessAnalysis,
+      body.uxDesign
+    );
 
     return Response.json(output);
   } catch (error: unknown) {

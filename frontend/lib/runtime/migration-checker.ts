@@ -1,5 +1,6 @@
 import type { GeneratedSourceFile } from "@/lib/project-generator/types";
 import { PROJECT_NAMESPACE } from "@/lib/project-generator/types";
+import { extractExceptionExcerpt } from "./database-checker";
 import { createCheckResult, type RuntimeCheckDetail } from "./runtime-report";
 
 export function verifyMigrationFiles(files: GeneratedSourceFile[]): RuntimeCheckDetail {
@@ -70,17 +71,37 @@ export function verifyMigrationFromCommandOutput(
     return createCheckResult(
       "Migration Execution",
       false,
-      "Migration execution failed — build or migration assembly error"
+      `Migration execution failed: ${extractExceptionExcerpt(output, 1200)}`
+    );
+  }
+
+  if (lower.includes("pendingmodelchangeswarning") || lower.includes("pending changes")) {
+    return createCheckResult(
+      "Migration Execution",
+      false,
+      "Migration model out of sync — regenerate with dotnet ef migrations add"
     );
   }
 
   return createCheckResult(
     "Migration Execution",
     false,
-    "dotnet ef database update failed — see runtime output for details"
+    `dotnet ef database update failed: ${extractExceptionExcerpt(output, 1200)}`
   );
 }
 
-export function migrationCommand(): string {
-  return `dotnet ef database update --project ${PROJECT_NAMESPACE}.Infrastructure --startup-project ${PROJECT_NAMESPACE}.API`;
+function quoteConnectionString(connectionString: string): string {
+  return connectionString.replace(/"/g, '\\"');
+}
+
+export function migrationCommand(connectionString?: string): string {
+  const base = `dotnet ef database update --project ${PROJECT_NAMESPACE}.Infrastructure --startup-project ${PROJECT_NAMESPACE}.API`;
+  if (!connectionString) return base;
+  return `${base} --connection "${quoteConnectionString(connectionString)}"`;
+}
+
+export function migrationAddCommand(connectionString?: string): string {
+  const base = `dotnet ef migrations add InitialCreate --project ${PROJECT_NAMESPACE}.Infrastructure --startup-project ${PROJECT_NAMESPACE}.API --output-dir Migrations`;
+  if (!connectionString) return base;
+  return `${base} --connection "${quoteConnectionString(connectionString)}"`;
 }

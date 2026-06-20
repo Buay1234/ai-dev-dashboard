@@ -21,10 +21,24 @@ export const STANDBY_THOUGHTS: AgentThought[] = [
     progress: 0,
   },
   {
+    agent: "Sanji",
+    status: "Standby",
+    task: "Awaiting backend contract",
+    thoughts: ["Standing by for UX design"],
+    progress: 0,
+  },
+  {
     agent: "Nami",
     status: "Standby",
     task: "Awaiting API contract",
     thoughts: ["Standing by for UI build"],
+    progress: 0,
+  },
+  {
+    agent: "Jinbe",
+    status: "Standby",
+    task: "Awaiting frontend plan",
+    thoughts: ["Standing by for Swagger auto-binding"],
     progress: 0,
   },
   {

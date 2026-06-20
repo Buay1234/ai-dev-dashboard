@@ -3,12 +3,14 @@ import type { AgentStatus, AgentStatusProps } from "@/lib/types/agent-results";
 export const AGENT_NAMES = [
   "Robin",
   "Zoro",
+  "Sanji",
   "Nami",
+  "Jinbe",
   "Franky",
   "Usopp",
 ] as const;
 
-export type AgentTheme = "purple" | "green" | "orange" | "blue" | "yellow";
+export type AgentTheme = "purple" | "green" | "red" | "orange" | "teal" | "blue" | "yellow";
 
 export type AgentConfig = {
   name: (typeof AGENT_NAMES)[number];
@@ -42,6 +44,15 @@ export const AGENT_CONFIG: AgentConfig[] = [
     theme: "green",
   },
   {
+    name: "Sanji",
+    role: "UI/UX Designer",
+    officeTitle: "Sanji UX Design Studio",
+    icon: "🍳",
+    avatar: "🎨",
+    image: "/agents/nami.png",
+    theme: "red",
+  },
+  {
     name: "Nami",
     role: "Frontend Developer",
     officeTitle: "Nami Frontend Development Team",
@@ -49,6 +60,15 @@ export const AGENT_CONFIG: AgentConfig[] = [
     avatar: "🧭",
     image: "/agents/nami.png",
     theme: "orange",
+  },
+  {
+    name: "Jinbe",
+    role: "API Integration Architect",
+    officeTitle: "Jinbe API Binding Lab",
+    icon: "🐋",
+    avatar: "🔗",
+    image: "/agents/franky.png",
+    theme: "teal",
   },
   {
     name: "Franky",
@@ -107,12 +127,26 @@ export const AGENT_THEME_STYLES: Record<
     text: "#86efac",
     ring: "rgba(34, 197, 94, 0.35)",
   },
+  red: {
+    glow: "rgba(239, 68, 68, 0.55)",
+    border: "rgba(239, 68, 68, 0.45)",
+    bg: "rgba(239, 68, 68, 0.12)",
+    text: "#fca5a5",
+    ring: "rgba(239, 68, 68, 0.35)",
+  },
   orange: {
     glow: "rgba(249, 115, 22, 0.55)",
     border: "rgba(249, 115, 22, 0.45)",
     bg: "rgba(249, 115, 22, 0.12)",
     text: "#fdba74",
     ring: "rgba(249, 115, 22, 0.35)",
+  },
+  teal: {
+    glow: "rgba(20, 184, 166, 0.55)",
+    border: "rgba(20, 184, 166, 0.45)",
+    bg: "rgba(20, 184, 166, 0.12)",
+    text: "#5eead4",
+    ring: "rgba(20, 184, 166, 0.35)",
   },
   blue: {
     glow: "rgba(59, 130, 246, 0.55)",
@@ -175,7 +209,9 @@ export function toAgentStatusMap(
   return {
     Robin: props.robinStatus,
     Zoro: props.zoroStatus,
+    Sanji: props.sanjiStatus,
     Nami: props.namiStatus,
+    Jinbe: props.jinbeStatus,
     Franky: props.frankyStatus,
     Usopp: props.usoppStatus,
   };

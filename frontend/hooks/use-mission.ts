@@ -92,8 +92,10 @@ export function useMission() {
   const [requirement, setRequirement] = useState("");
   const [robinStatus, setRobinStatus] = useState<AgentStatus>("Idle");
   const [zoroStatus, setZoroStatus] = useState<AgentStatus>("Idle");
+  const [sanjiStatus, setSanjiStatus] = useState<AgentStatus>("Idle");
   const [usoppStatus, setUsoppStatus] = useState<AgentStatus>("Idle");
   const [namiStatus, setNamiStatus] = useState<AgentStatus>("Idle");
+  const [jinbeStatus, setJinbeStatus] = useState<AgentStatus>("Idle");
   const [frankyStatus, setFrankyStatus] = useState<AgentStatus>("Idle");
   const [currentAgent, setCurrentAgent] = useState("Idle");
   const [loading, setLoading] = useState(false);
@@ -102,8 +104,10 @@ export function useMission() {
   const [successCount, setSuccessCount] = useState(0);
   const [frankyResult, setFrankyResult] = useState("");
   const [namiResult, setNamiResult] = useState("");
+  const [jinbeResult, setJinbeResult] = useState("");
   const [robinResult, setRobinResult] = useState("");
   const [zoroResult, setZoroResult] = useState("");
+  const [sanjiResult, setSanjiResult] = useState("");
   const [usoppResult, setUsoppResult] = useState("");
   const [logs, setLogs] = useState<string[]>([]);
   const [history, setHistory] = useState<string[]>([]);
@@ -183,13 +187,17 @@ export function useMission() {
       clearArtifactStore();
       setRobinResult("");
       setZoroResult("");
+      setSanjiResult("");
       setNamiResult("");
+      setJinbeResult("");
       setFrankyResult("");
       setUsoppResult("");
       setRobinStatus("Working");
       setCurrentAgent("Robin");
       setZoroStatus("Idle");
+      setSanjiStatus("Idle");
       setNamiStatus("Idle");
+      setJinbeStatus("Idle");
       setFrankyStatus("Idle");
       setUsoppStatus("Idle");
 
@@ -287,9 +295,9 @@ export function useMission() {
       }
 
       setRobinStatus("Completed");
-      setProgress(20);
+      setProgress(14);
       setRobinResult(robinData.result);
-      applyAiWorkflow("Robin", "Thinking", robinData, 20, setThought, addMessage);
+      applyAiWorkflow("Robin", "Thinking", robinData, 14, setThought, addMessage);
 
       setCurrentAgent("Zoro");
       setZoroStatus("Working");
@@ -299,7 +307,7 @@ export function useMission() {
           "Developing",
           ["Waiting for Robin report…", "Connecting to Gemini…"],
           "Consulting Gemini",
-          22
+          16
         )
       );
 
@@ -325,8 +333,57 @@ export function useMission() {
 
       setZoroResult(zoroData.result);
       setZoroStatus("Completed");
-      setProgress(40);
-      applyAiWorkflow("Zoro", "Developing", zoroData, 40, setThought, addMessage);
+      setProgress(28);
+      applyAiWorkflow("Zoro", "Developing", zoroData, 28, setThought, addMessage);
+
+      setCurrentAgent("Sanji");
+      setSanjiStatus("Working");
+      setThought(
+        createAgentThought(
+          "Sanji",
+          "Designing",
+          ["Analyzing requirements…", "Generating wireframes & design system…"],
+          "Consulting Gemini",
+          30
+        )
+      );
+
+      addLog("Sanji Started — V33 UI/UX design workflow");
+      const sanjiResponse = await fetchAgentWithRetry("/api/sanji", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          backendDesign: zoroData.result,
+          requirement,
+          domain: architecture.domain,
+          entityNames: architecture.entities,
+          businessAnalysis: agentArchitecturePayload,
+        }),
+      });
+      addLog("Sanji Completed");
+
+      if (!sanjiResponse.ok) {
+        const errorMessage = await readFetchError(sanjiResponse, "Sanji");
+        throw new Error(errorMessage);
+      }
+
+      const sanjiData = (await sanjiResponse.json()) as AgentApiPayload & {
+        designGeneration?: { uxQuality?: { percentage?: number; grade?: string } };
+      };
+
+      setSanjiResult(sanjiData.result);
+      setSanjiStatus("Completed");
+      setProgress(42);
+      applyAiWorkflow("Sanji", "Designing", sanjiData, 42, setThought, addMessage);
+
+      if (sanjiData.designGeneration?.uxQuality) {
+        addMessage(
+          "Sanji",
+          `UX Quality Score: ${sanjiData.designGeneration.uxQuality.percentage}% (${sanjiData.designGeneration.uxQuality.grade})`
+        );
+      }
 
       setCurrentAgent("Nami");
       setNamiStatus("Working");
@@ -336,7 +393,7 @@ export function useMission() {
           "Building UI",
           ["Reviewing backend plan…", "Connecting to Gemini…"],
           "Consulting Gemini",
-          42
+          44
         )
       );
 
@@ -348,6 +405,7 @@ export function useMission() {
         },
         body: JSON.stringify({
           backendDesign: zoroData.result,
+          uxDesign: sanjiData.result,
           businessAnalysis: agentArchitecturePayload,
         }),
       });
@@ -362,8 +420,58 @@ export function useMission() {
 
       setNamiResult(namiData.result);
       setNamiStatus("Completed");
-      setProgress(60);
-      applyAiWorkflow("Nami", "Building UI", namiData, 60, setThought, addMessage);
+      setProgress(57);
+      applyAiWorkflow("Nami", "Building UI", namiData, 57, setThought, addMessage);
+
+      setCurrentAgent("Jinbe");
+      setJinbeStatus("Working");
+      setThought(
+        createAgentThought(
+          "Jinbe",
+          "Binding",
+          ["Parsing Swagger/OpenAPI…", "Generating types, services & hooks…"],
+          "Consulting Gemini",
+          59
+        )
+      );
+
+      addLog("Jinbe Started — V34 API auto-binding workflow");
+      const jinbeResponse = await fetchAgentWithRetry("/api/jinbe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          backendDesign: zoroData.result,
+          frontendDesign: namiData.result,
+          entityNames: architecture.entities,
+          businessAnalysis: agentArchitecturePayload,
+        }),
+      });
+      addLog("Jinbe Completed");
+
+      if (!jinbeResponse.ok) {
+        const errorMessage = await readFetchError(jinbeResponse, "Jinbe");
+        throw new Error(errorMessage);
+      }
+
+      const jinbeData = (await jinbeResponse.json()) as AgentApiPayload & {
+        apiBindingGeneration?: {
+          buildStatus?: { passed?: boolean; operationCount?: number };
+        };
+      };
+
+      setJinbeResult(jinbeData.result);
+      setJinbeStatus("Completed");
+      setProgress(71);
+      applyAiWorkflow("Jinbe", "Binding", jinbeData, 71, setThought, addMessage);
+
+      if (jinbeData.apiBindingGeneration?.buildStatus) {
+        addMessage(
+          "Jinbe",
+          `API Binding — ${jinbeData.apiBindingGeneration.buildStatus.operationCount ?? 0} operations · Build: ${jinbeData.apiBindingGeneration.buildStatus.passed ? "PASS" : "FAIL"}`
+        );
+      }
 
       setCurrentAgent("Franky");
       setFrankyStatus("Working");
@@ -373,7 +481,7 @@ export function useMission() {
           "Reviewing",
           ["Reviewing deliverables…", "Connecting to Gemini…"],
           "Consulting Gemini",
-          62
+          73
         )
       );
 
@@ -386,6 +494,7 @@ export function useMission() {
         body: JSON.stringify({
           backendDesign: zoroData.result,
           frontendDesign: namiData.result,
+          apiIntegration: jinbeData.result,
           businessAnalysis: domainAnalysisPayload,
         }),
       });
@@ -407,8 +516,8 @@ export function useMission() {
 
       setFrankyResult(frankyData.result);
       setFrankyStatus("Completed");
-      setProgress(80);
-      applyAiWorkflow("Franky", "Reviewing", frankyData, 80, setThought, addMessage);
+      setProgress(85);
+      applyAiWorkflow("Franky", "Reviewing", frankyData, 85, setThought, addMessage);
 
       setCurrentAgent("Usopp");
       setUsoppStatus("Working");
@@ -418,7 +527,7 @@ export function useMission() {
           "Testing",
           ["Preparing QA plan…", "Connecting to Gemini…"],
           "Consulting Gemini",
-          82
+          85
         )
       );
 
@@ -722,7 +831,9 @@ export function useMission() {
 
       setRobinStatus((prev) => (prev === "Working" ? "Error" : prev));
       setZoroStatus((prev) => (prev === "Working" ? "Error" : prev));
+      setSanjiStatus((prev) => (prev === "Working" ? "Error" : prev));
       setNamiStatus((prev) => (prev === "Working" ? "Error" : prev));
+      setJinbeStatus((prev) => (prev === "Working" ? "Error" : prev));
       setFrankyStatus((prev) => (prev === "Working" ? "Error" : prev));
       setUsoppStatus((prev) => (prev === "Working" ? "Error" : prev));
     } finally {
@@ -756,8 +867,10 @@ export function useMission() {
     setRequirement,
     robinStatus,
     zoroStatus,
+    sanjiStatus,
     usoppStatus,
     namiStatus,
+    jinbeStatus,
     frankyStatus,
     currentAgent,
     loading,
@@ -766,8 +879,10 @@ export function useMission() {
     successCount,
     frankyResult,
     namiResult,
+    jinbeResult,
     robinResult,
     zoroResult,
+    sanjiResult,
     usoppResult,
     logs,
     messages,

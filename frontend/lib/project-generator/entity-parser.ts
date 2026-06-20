@@ -154,6 +154,7 @@ function parseCreateTableBlocks(sql: string): EntityDefinition[] {
     }
 
     const entityName = toPascalCase(toSingular(tableName));
+    if (!isValidEntityName(entityName)) continue;
     entities.push({ name: entityName, tableName, fields });
   }
 
@@ -219,6 +220,61 @@ function entitiesFromAnalysis(
   return names.map(entityFromName);
 }
 
+function isValidEntityName(name: string): boolean {
+  return name.length >= 2 && /^[A-Za-z][A-Za-z0-9]*$/.test(name);
+}
+
+const AUDIT_FIELDS: EntityField[] = [
+  {
+    name: "CreatedAt",
+    csharpType: "DateTime",
+    sqlType: "DATETIME2 NOT NULL DEFAULT GETUTCDATE()",
+    isRequired: true,
+    isKey: false,
+  },
+  {
+    name: "UpdatedAt",
+    csharpType: "DateTime?",
+    sqlType: "DATETIME2 NULL",
+    isRequired: false,
+    isKey: false,
+  },
+];
+
+export function ensureAuditFields(entities: EntityDefinition[]): EntityDefinition[] {
+  return entities.map((entity) => {
+    const names = new Set(entity.fields.map((f) => f.name));
+    const extra = AUDIT_FIELDS.filter((f) => !names.has(f.name));
+    if (extra.length === 0) return entity;
+    return { ...entity, fields: [...entity.fields, ...extra] };
+  });
+}
+
+/** Union entities by name — prefer definitions with more fields (e.g. SQL over stubs). */
+export function mergeEntitySources(
+  ...lists: EntityDefinition[][]
+): EntityDefinition[] {
+  const byName = new Map<string, EntityDefinition>();
+
+  for (const list of lists) {
+    for (const entity of list) {
+      if (!isValidEntityName(entity.name)) continue;
+      const existing = byName.get(entity.name);
+      if (!existing || entity.fields.length > existing.fields.length) {
+        byName.set(entity.name, entity);
+      }
+    }
+  }
+
+  return [...byName.values()];
+}
+
+export function entitiesFromNames(names: string[]): EntityDefinition[] {
+  return [...new Set(names)]
+    .filter(isValidEntityName)
+    .map(entityFromName);
+}
+
 export function extractEntities(
   robin: string,
   zoro: string,
@@ -226,34 +282,40 @@ export function extractEntities(
   analysis?: RequirementAnalysisContract | null,
   architecture?: ArchitectureContract | null
 ): EntityDefinition[] {
+  const sources: EntityDefinition[][] = [];
+
   const fromSql = parseCreateTableBlocks(zoro);
-  if (fromSql.length > 0) return fromSql;
+  if (fromSql.length > 0) sources.push(fromSql);
 
   if (architecture) {
     const fromArchitecture = entitiesFromArchitecture(architecture, requirement);
-    if (fromArchitecture.length > 0) return fromArchitecture;
+    if (fromArchitecture.length > 0) sources.push(fromArchitecture);
   }
 
   if (analysis) {
     const fromAnalysis = entitiesFromAnalysis(analysis, requirement);
-    if (fromAnalysis.length > 0) return fromAnalysis;
+    if (fromAnalysis.length > 0) sources.push(fromAnalysis);
   }
 
   const robinNames = parseRobinEntityNames(robin).filter(
     (name) => !isGenericEntity(name, requirement)
   );
   if (robinNames.length > 0) {
-    return robinNames.map(entityFromName);
+    sources.push(robinNames.map(entityFromName));
   }
 
   const inferred = inferFromRequirement(requirement).filter(
     (name) => !isGenericEntity(name, requirement)
   );
   if (inferred.length > 0) {
-    return inferred.map(entityFromName);
+    sources.push(inferred.map(entityFromName));
   }
 
-  return [entityFromName("BusinessRecord")];
+  if (sources.length === 0) {
+    return [entityFromName("BusinessRecord")];
+  }
+
+  return mergeEntitySources(...sources);
 }
 
 export { toPascalCase };

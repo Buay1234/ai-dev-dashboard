@@ -16,7 +16,9 @@ import type { OfficeRoomTheme } from "./theme";
 const AGENT_THEMES: Record<string, OfficeRoomTheme> = {
   Robin: "purple",
   Zoro: "green",
+  Sanji: "red",
   Nami: "orange",
+  Jinbe: "teal",
   Franky: "blue",
   Usopp: "yellow",
 };

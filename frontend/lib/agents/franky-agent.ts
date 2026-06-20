@@ -5,7 +5,8 @@ import type { AgentWorkflowResult } from "./types";
 export async function runFrankyAgent(
   zoroOutput: string,
   namiOutput: string,
-  businessAnalysis?: string
+  businessAnalysis?: string,
+  apiIntegration?: string
 ): Promise<AgentWorkflowResult> {
   const structuredContext = businessAnalysis
     ? `
@@ -15,13 +16,21 @@ ${businessAnalysis}
 `
     : "";
 
+  const apiContext = apiIntegration
+    ? `
+
+Jinbe API Integration (V34 Swagger Auto Binding):
+${apiIntegration}
+`
+    : "";
+
   const prompt = `
 You are Franky.
 Act as a senior full-stack architect.
 
 ${buildMetaInstructions()}
 
-Review the backend and frontend plans against the structured business analysis and produce an Architecture Review.
+Review the backend, frontend, and API integration plans against the structured business analysis and produce an Architecture Review.
 
 Backend Plan:
 ${zoroOutput}
@@ -29,6 +38,7 @@ ${zoroOutput}
 Frontend Plan:
 ${namiOutput}
 ${structuredContext}
+${apiContext}
 
 Identify and document:
 - architecture patterns for the detected domain

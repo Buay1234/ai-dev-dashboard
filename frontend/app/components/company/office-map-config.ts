@@ -8,7 +8,9 @@ export type MapZone =
   | "Reception"
   | "Robin"
   | "Zoro"
+  | "Sanji"
   | "Nami"
+  | "Jinbe"
   | "Franky"
   | "Usopp"
   | "Meeting";
@@ -22,7 +24,9 @@ export const MISSION_PIPELINE: MapZone[] = [
   "Reception",
   "Robin",
   "Zoro",
+  "Sanji",
   "Nami",
+  "Jinbe",
   "Franky",
   "Usopp",
 ];
@@ -34,8 +38,10 @@ export const ROOM_ANCHORS: Record<MapZone, MapAnchor> = {
   Robin: { x: 84, y: 23 },
   Franky: { x: 16, y: 49 },
   Zoro: { x: 84, y: 49 },
+  Sanji: { x: 84, y: 63 },
+  Nami: { x: 84, y: 70 },
+  Jinbe: { x: 50, y: 70 },
   Usopp: { x: 16, y: 77 },
-  Nami: { x: 84, y: 77 },
 };
 
 /** Group meeting slots inside Meeting Room */
@@ -50,7 +56,9 @@ export const MEETING_SLOTS: MapAnchor[] = [
 export const AGENT_HOME: Record<(typeof AGENT_NAMES)[number], MapAnchor> = {
   Robin: ROOM_ANCHORS.Robin,
   Zoro: ROOM_ANCHORS.Zoro,
+  Sanji: ROOM_ANCHORS.Sanji,
   Nami: ROOM_ANCHORS.Nami,
+  Jinbe: ROOM_ANCHORS.Jinbe,
   Franky: ROOM_ANCHORS.Franky,
   Usopp: ROOM_ANCHORS.Usopp,
 };
@@ -60,7 +68,9 @@ export const ROOM_LABELS: { zone: MapZone; title: string }[] = [
   { zone: "Reception", title: "Reception Desk" },
   { zone: "Robin", title: "Robin Office" },
   { zone: "Zoro", title: "Zoro Backend Lab" },
+  { zone: "Sanji", title: "Sanji UX Design Studio" },
   { zone: "Nami", title: "Nami Frontend Studio" },
+  { zone: "Jinbe", title: "Jinbe API Binding Lab" },
   { zone: "Franky", title: "Franky Architecture Room" },
   { zone: "Usopp", title: "Usopp Build Verification Center" },
 ];

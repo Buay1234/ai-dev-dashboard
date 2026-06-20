@@ -4,7 +4,8 @@ import type { AgentWorkflowResult } from "./types";
 
 export async function runNamiAgent(
   zoroOutput: string,
-  businessAnalysis?: string
+  businessAnalysis?: string,
+  uxDesign?: string
 ): Promise<AgentWorkflowResult> {
   const structuredContext = businessAnalysis
     ? `
@@ -14,17 +15,26 @@ ${businessAnalysis}
 `
     : "";
 
+  const uxContext = uxDesign
+    ? `
+
+Sanji UX Design Handoff (V33 — navigation, wireframes, design system):
+${uxDesign}
+`
+    : "";
+
   const prompt = `
 You are Nami.
 Act as a senior frontend developer.
 
 ${buildMetaInstructions()}
 
-Using Zoro's Backend Plan and the V30 architecture plan, produce a Frontend Plan aligned to layers, modules, and project structure.
+Using Zoro's Backend Plan, Sanji's UX design handoff, and the V30 architecture plan, produce a Frontend Plan aligned to layers, modules, and project structure.
 
 Zoro Output:
 ${zoroOutput}
 ${structuredContext}
+${uxContext}
 
 Identify and document:
 - screens and navigation flow per parsed modules

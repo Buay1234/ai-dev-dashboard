@@ -22,6 +22,7 @@ export type RuntimeReport = {
   timestamp: string;
   output?: string;
   sdkAvailable?: boolean;
+  diagnostics?: import("./runtime-diagnostics").RuntimeDiagnostics;
 };
 
 export type RuntimeVerifyApiResponse = RuntimeReport;
@@ -85,7 +86,7 @@ export function computeRuntimePassed(report: Pick<RuntimeReport, "checks">): boo
 
 export function finalizeRuntimeReport(
   checks: RuntimeReport["checks"],
-  partial?: Partial<Pick<RuntimeReport, "output" | "sdkAvailable">>
+  partial?: Partial<Pick<RuntimeReport, "output" | "sdkAvailable" | "diagnostics">>
 ): RuntimeReport {
   const runtimePassed = computeRuntimePassed({ checks });
   return {

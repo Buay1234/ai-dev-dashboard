@@ -10,9 +10,17 @@ ${results.robin}
 
 ${results.zoro}
 
+# UX Design
+
+${results.sanji}
+
 # Frontend Design
 
 ${results.nami}
+
+# API Integration
+
+${results.jinbe}
 
 # Architecture
 

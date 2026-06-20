@@ -9,7 +9,8 @@ export async function POST(req: Request) {
     const output = await runFrankyAgent(
       body.backendDesign,
       body.frontendDesign,
-      body.businessAnalysis
+      body.businessAnalysis,
+      body.apiIntegration
     );
 
     return Response.json(output);

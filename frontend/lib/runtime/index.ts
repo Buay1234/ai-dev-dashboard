@@ -23,10 +23,21 @@ export {
 export {
   verifyDatabaseConfiguration,
   verifyDatabaseFromCommandOutput,
+  verifyDatabaseSelectOneOutput,
   extractConnectionString,
+  extractConnectionStringFromPayload,
+  buildSqlCmdSelectOneCommand,
+  extractExceptionExcerpt,
 } from "./database-checker";
 export {
   verifyMigrationFiles,
   verifyMigrationFromCommandOutput,
   migrationCommand,
+  migrationAddCommand,
 } from "./migration-checker";
+export {
+  STARTUP_TIMEOUT_MS,
+  formatDiagnosticsOutput,
+  verifyRuntimeEndpoints,
+  type RuntimeDiagnostics,
+} from "./runtime-diagnostics";

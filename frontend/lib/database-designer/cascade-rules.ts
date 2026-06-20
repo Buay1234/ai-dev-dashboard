@@ -77,6 +77,27 @@ export function generateFluentApiConfigurations(
 
   for (const rel of relationships) {
     const onDelete = cascadeById.get(rel.id) ?? "Restrict";
+
+    if (rel.cardinality === "ManyToMany") {
+      const fromNav = navigationProperties.find(
+        (n) => n.entity === rel.from && n.targetEntity === rel.to && n.isCollection
+      );
+      const toNav = navigationProperties.find(
+        (n) => n.entity === rel.to && n.targetEntity === rel.from && n.isCollection
+      );
+      if (!fromNav || !toNav) continue;
+
+      const joinTable = `${rel.from}${rel.to}s`;
+      configs.push({
+        entity: rel.from,
+        relationshipId: rel.id,
+        code: `builder.HasMany(x => x.${fromNav.property})
+            .WithMany(x => x.${toNav.property})
+            .UsingEntity(j => j.ToTable("${joinTable}"));`,
+      });
+      continue;
+    }
+
     const dependentNav = navigationProperties.find(
       (n) => n.entity === rel.dependentEntity && n.targetEntity === rel.principalEntity && !n.isCollection
     );
@@ -84,19 +105,9 @@ export function generateFluentApiConfigurations(
       (n) => n.entity === rel.principalEntity && n.targetEntity === rel.dependentEntity && n.isCollection
     );
 
-    if (rel.cardinality === "ManyToMany") {
-      const joinTable = `${rel.from}${rel.to}s`;
-      configs.push({
-        entity: rel.from,
-        relationshipId: rel.id,
-        code: `builder.HasMany(x => x.${rel.to}s)
-            .WithMany(x => x.${rel.from}s)
-            .UsingEntity(j => j.ToTable("${joinTable}"));`,
-      });
-      continue;
-    }
+    if (!dependentNav) continue;
 
-    const dependentProperty = dependentNav?.property ?? rel.principalEntity;
+    const dependentProperty = dependentNav.property;
     const principalProperty = principalNav?.property ?? `${rel.dependentEntity}s`;
     const fkProperty = `${rel.principalEntity}Id`;
 

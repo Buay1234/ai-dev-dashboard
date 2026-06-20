@@ -1,10 +1,11 @@
 import type { AgentOutputs } from "@/lib/artifacts/artifact-generator";
 import type { GeneratedProjectBundle, GeneratedSourceFile, EntityDefinition } from "./types";
 import { PROJECT_NAMESPACE } from "./types";
-import { extractEntities } from "./entity-parser";
+import { entitiesFromNames, ensureAuditFields, extractEntities, mergeEntitySources } from "./entity-parser";
 import type { RequirementAnalysisContract } from "@/lib/requirement-parser";
 import type { ArchitectureContract } from "@/lib/domain-library/types";
 import {
+  alignDatabaseDesignWithEntities,
   applyDatabaseDesignToEntities,
   designDatabase,
   exportErDiagramJson,
@@ -22,15 +23,21 @@ import {
 import {
   generateCrudControllers,
   generateDtoFiles,
+  generateHealthControllers,
 } from "./controller-generator";
 import {
   generateTestPlanDoc,
   generateUnitTests,
 } from "./unit-test-generator";
+import { runDesignGenerationFromEntities } from "@/lib/design-generator";
+import { runFrontendGeneration } from "@/lib/frontend-generator";
+import { runApiBindingGeneration } from "@/lib/api-binding-generator";
 import {
+  APPSETTINGS_DEVELOPMENT_JSON,
   APPSETTINGS_JSON,
   buildSolutionFile,
   DOMAIN_CSPROJ,
+  LAUNCH_SETTINGS_JSON,
 } from "@/lib/project-templates";
 
 function generateProgramCs(entities: ReturnType<typeof extractEntities>): GeneratedSourceFile {
@@ -41,7 +48,10 @@ function generateProgramCs(entities: ReturnType<typeof extractEntities>): Genera
     )
     .join("\n");
 
-  const content = `using Microsoft.EntityFrameworkCore;
+  const content = `using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using ${PROJECT_NAMESPACE}.Infrastructure.Data;
 using ${PROJECT_NAMESPACE}.Infrastructure.Repositories;
 
@@ -58,13 +68,9 @@ ${repoRegistrations}
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI(c => c.RoutePrefix = "swagger");
 
-app.UseHttpsRedirection();
 app.MapControllers();
 app.Run();
 `;
@@ -148,6 +154,7 @@ function generateApiCsproj(): GeneratedSourceFile {
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
@@ -165,10 +172,6 @@ function generateApiCsproj(): GeneratedSourceFile {
   };
 }
 
-function uniqueEntityDefinitions(entities: EntityDefinition[]): EntityDefinition[] {
-  return [...new Map(entities.map((e) => [e.name, e])).values()];
-}
-
 export function generateProjectBundle(
   outputs: AgentOutputs,
   requirement: string,
@@ -176,20 +179,44 @@ export function generateProjectBundle(
   architecture?: ArchitectureContract | null,
   databaseDesign?: DatabaseDesignContract | null
 ): GeneratedProjectBundle {
-  const rawEntities = uniqueEntityDefinitions(
-    extractEntities(outputs.robin, outputs.zoro, requirement, analysis, architecture)
-  );
-
   const resolvedDesign =
     databaseDesign ?? (architecture ? designDatabase(architecture) : null);
+
+  const extracted = extractEntities(
+    outputs.robin,
+    outputs.zoro,
+    requirement,
+    analysis,
+    architecture
+  );
+  const fromDesign = resolvedDesign
+    ? entitiesFromNames(resolvedDesign.entities)
+    : [];
+  const rawEntities = ensureAuditFields(
+    mergeEntitySources(extracted, fromDesign)
+  );
 
   const entities = resolvedDesign
     ? applyDatabaseDesignToEntities(rawEntities, resolvedDesign.foreignKeys)
     : rawEntities;
 
-  const databaseResult = runDatabaseMigrationWorkflow(entities, resolvedDesign);
+  const alignedDesign = resolvedDesign
+    ? alignDatabaseDesignWithEntities(resolvedDesign, entities)
+    : null;
 
-  const erDiagramFile: GeneratedSourceFile | null = resolvedDesign
+  const databaseResult = runDatabaseMigrationWorkflow(entities, alignedDesign);
+  const designGeneration = runDesignGenerationFromEntities(
+    entities,
+    requirement,
+    architecture?.domain ?? analysis?.domain ?? "MyProject"
+  );
+  const frontendGeneration = runFrontendGeneration({
+    entities,
+    designContract: designGeneration.contract,
+  });
+  const apiBindingGeneration = runApiBindingGeneration({ entities });
+
+  const erDiagramFile: GeneratedSourceFile | null = alignedDesign
     ? {
         id: "er-diagram-json",
         path: "docs/database",
@@ -197,7 +224,7 @@ export function generateProjectBundle(
         category: "docs",
         agent: "Franky",
         language: "markdown",
-        content: exportErDiagramJson(resolvedDesign),
+        content: exportErDiagramJson(alignedDesign),
       }
     : null;
 
@@ -206,10 +233,14 @@ export function generateProjectBundle(
     generateSqlScript(entities),
     generateDatabaseDesignDoc(entities, outputs.zoro),
     ...(erDiagramFile ? [erDiagramFile] : []),
-    ...generateEntityClasses(entities, resolvedDesign),
+    ...generateEntityClasses(entities, alignedDesign),
     ...generateRepositories(entities),
     ...generateDtoFiles(entities),
     ...generateCrudControllers(entities),
+    ...generateHealthControllers(),
+    ...designGeneration.sourceFiles,
+    ...frontendGeneration.sourceFiles,
+    ...apiBindingGeneration.sourceFiles,
     ...generateUnitTests(entities),
     generateTestPlanDoc(outputs.usopp),
     generateProgramCs(entities),
@@ -255,6 +286,24 @@ export function generateProjectBundle(
       content: APPSETTINGS_JSON.trim(),
     },
     {
+      id: "appsettings-dev",
+      path: `${PROJECT_NAMESPACE}.API`,
+      fileName: "appsettings.Development.json",
+      category: "infrastructure",
+      agent: "Zoro",
+      language: "csharp",
+      content: APPSETTINGS_DEVELOPMENT_JSON.trim(),
+    },
+    {
+      id: "launch-settings",
+      path: `${PROJECT_NAMESPACE}.API/Properties`,
+      fileName: "launchSettings.json",
+      category: "infrastructure",
+      agent: "Franky",
+      language: "csharp",
+      content: LAUNCH_SETTINGS_JSON.trim(),
+    },
+    {
       id: "readme",
       path: "",
       fileName: "README.md",
@@ -271,6 +320,7 @@ Generated by AI Dev Dashboard V24 · EF Core Migration Runner
 - **Infrastructure** — DbContext, Entity Configurations, EF Migrations
 - **Application** — DTOs
 - **API** — CRUD Controllers
+- **frontend/** — Next.js App Router UI (Nami)
 - **Tests** — xUnit + Moq
 
 ## EF Core Migration (Visual Studio 2022)
@@ -312,6 +362,9 @@ dotnet test ${PROJECT_NAMESPACE}.Tests
     sourceFiles,
     databaseWorkflow: databaseResult.workflow,
     migrationArtifacts: databaseResult.migrationArtifacts,
+    designGeneration,
+    frontendGeneration,
+    apiBindingGeneration,
   };
 }
 
@@ -324,6 +377,9 @@ export function getProjectGenerationSteps(entities: ReturnType<typeof extractEnt
     { id: "snapshot", label: "Model Snapshot Complete", done: true },
     { id: "repos", label: "Repositories Generated", done: true },
     { id: "api", label: "CRUD Controllers Generated", done: true },
+    { id: "design", label: "UI/UX Design V33 (Sanji)", done: true },
+    { id: "frontend", label: "Next.js Frontend V32 (Nami)", done: true },
+    { id: "api-binding", label: "API Auto Binding V34 (Jinbe)", done: true },
     { id: "tests", label: "xUnit Tests Generated", done: true },
   ];
 }

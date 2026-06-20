@@ -1,4 +1,4 @@
-export type OfficeRoomTheme = "purple" | "green" | "orange" | "blue" | "yellow";
+export type OfficeRoomTheme = "purple" | "green" | "red" | "orange" | "teal" | "blue" | "yellow";
 
 export const THEME_STYLES: Record<
   OfficeRoomTheme,
@@ -24,12 +24,26 @@ export const THEME_STYLES: Record<
     iconBg: "bg-emerald-500/20 text-emerald-300",
     accent: "text-emerald-300",
   },
+  red: {
+    borderColor: "rgba(239, 68, 68, 0.35)",
+    hoverBorder: "rgba(239, 68, 68, 0.65)",
+    glowRgb: "rgb(239, 68, 68)",
+    iconBg: "bg-red-500/20 text-red-300",
+    accent: "text-red-300",
+  },
   orange: {
     borderColor: "rgba(249, 115, 22, 0.35)",
     hoverBorder: "rgba(249, 115, 22, 0.65)",
     glowRgb: "rgb(249, 115, 22)",
     iconBg: "bg-orange-500/20 text-orange-300",
     accent: "text-orange-300",
+  },
+  teal: {
+    borderColor: "rgba(20, 184, 166, 0.35)",
+    hoverBorder: "rgba(20, 184, 166, 0.65)",
+    glowRgb: "rgb(20, 184, 166)",
+    iconBg: "bg-teal-500/20 text-teal-300",
+    accent: "text-teal-300",
   },
   blue: {
     borderColor: "rgba(6, 182, 212, 0.35)",

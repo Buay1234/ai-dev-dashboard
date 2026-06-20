@@ -148,6 +148,17 @@ export default function RuntimeVerificationPanel({ report, running }: Props) {
           Runtime passed — API, Swagger, database, and migration verified
         </p>
       )}
+
+      {report?.output && (
+        <details className="mt-4 rounded-lg border border-border-subtle bg-surface-1">
+          <summary className="cursor-pointer px-3 py-2 text-[10px] font-mono text-cyan-300">
+            Full runtime diagnostics
+          </summary>
+          <pre className="max-h-64 overflow-auto px-3 pb-3 text-[10px] font-mono text-text-muted whitespace-pre-wrap">
+            {report.output}
+          </pre>
+        </details>
+      )}
     </Card>
   );
 }

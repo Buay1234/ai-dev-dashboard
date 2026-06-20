@@ -20,9 +20,13 @@ export function generateEntityClasses(
   entities: EntityDefinition[],
   databaseDesign?: DatabaseDesignContract | null
 ): GeneratedSourceFile[] {
+  const entityNames = new Set(entities.map((e) => e.name));
+
   return entities.map((entity) => {
     const navProps =
-      databaseDesign?.navigationProperties.filter((n) => n.entity === entity.name) ?? [];
+      databaseDesign?.navigationProperties.filter(
+        (n) => n.entity === entity.name && entityNames.has(n.targetEntity)
+      ) ?? [];
     const hasNav = navProps.length > 0;
 
     const props = entity.fields
@@ -124,7 +128,19 @@ export function generateRepositories(
   const files: GeneratedSourceFile[] = [];
 
   for (const entity of entities) {
-    const iface = `using ${PROJECT_NAMESPACE}.Domain.Entities;
+    const hasCreatedAt = entity.fields.some((f) => f.name === "CreatedAt");
+    const hasUpdatedAt = entity.fields.some((f) => f.name === "UpdatedAt");
+    const createdAtLine = hasCreatedAt
+      ? "        entity.CreatedAt = DateTime.UtcNow;\n"
+      : "";
+    const updatedAtLine = hasUpdatedAt
+      ? "        entity.UpdatedAt = DateTime.UtcNow;\n"
+      : "";
+
+    const iface = `using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using ${PROJECT_NAMESPACE}.Domain.Entities;
 
 namespace ${PROJECT_NAMESPACE}.Infrastructure.Repositories;
 
@@ -138,7 +154,11 @@ public interface I${entity.name}Repository
 }
 `;
 
-    const impl = `using Microsoft.EntityFrameworkCore;
+    const impl = `using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using ${PROJECT_NAMESPACE}.Domain.Entities;
 using ${PROJECT_NAMESPACE}.Infrastructure.Data;
 
@@ -165,16 +185,14 @@ public class ${entity.name}Repository : I${entity.name}Repository
 
     public async Task<${entity.name}> AddAsync(${entity.name} entity, CancellationToken cancellationToken = default)
     {
-        entity.CreatedAt = DateTime.UtcNow;
-        _context.${entity.tableName}.Add(entity);
+${createdAtLine}        _context.${entity.tableName}.Add(entity);
         await _context.SaveChangesAsync(cancellationToken);
         return entity;
     }
 
     public async Task UpdateAsync(${entity.name} entity, CancellationToken cancellationToken = default)
     {
-        entity.UpdatedAt = DateTime.UtcNow;
-        _context.${entity.tableName}.Update(entity);
+${updatedAtLine}        _context.${entity.tableName}.Update(entity);
         await _context.SaveChangesAsync(cancellationToken);
     }
 

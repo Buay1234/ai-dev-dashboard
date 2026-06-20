@@ -23,7 +23,9 @@ function OfficeMap({
   currentAgent,
   robinStatus,
   zoroStatus,
+  sanjiStatus,
   namiStatus,
+  jinbeStatus,
   frankyStatus,
   usoppStatus,
   latestMessages = {},
@@ -36,11 +38,13 @@ function OfficeMap({
     () => ({
       Robin: robinStatus,
       Zoro: zoroStatus,
+      Sanji: sanjiStatus,
       Nami: namiStatus,
+      Jinbe: jinbeStatus,
       Franky: frankyStatus,
       Usopp: usoppStatus,
     }),
-    [robinStatus, zoroStatus, namiStatus, frankyStatus, usoppStatus]
+    [robinStatus, zoroStatus, sanjiStatus, namiStatus, jinbeStatus, frankyStatus, usoppStatus]
   );
 
   const missionActive = isMissionActive(statuses, currentAgent);
@@ -99,7 +103,7 @@ function OfficeMap({
         />
 
         <p className="mt-4 text-center text-[10px] font-mono uppercase tracking-widest text-zinc-600">
-          Reception → Robin → Zoro → Nami → Franky → Usopp → Meeting Room
+          Reception → Robin → Zoro → Sanji → Nami → Jinbe → Franky → Usopp → Meeting Room
         </p>
       </div>
     </section>
