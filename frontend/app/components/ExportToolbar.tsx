@@ -6,6 +6,7 @@ type Props = {
   onExportMarkdown: () => void;
   onExportPdf: () => void;
   onGenerateZip: () => void;
+  exportReady?: boolean;
   zipLocked?: boolean;
   onTestExtract: () => void;
   onDebugFiles: () => void;
@@ -16,11 +17,14 @@ export default function ExportToolbar({
   onExportMarkdown,
   onExportPdf,
   onGenerateZip,
+  exportReady = false,
   zipLocked = false,
   onTestExtract,
   onDebugFiles,
   onShowZoroResult,
 }: Props) {
+  const zipEnabled = exportReady || !zipLocked;
+
   return (
     <div
       className="flex flex-wrap gap-2"
@@ -37,14 +41,14 @@ export default function ExportToolbar({
         variant="primary"
         size="sm"
         onClick={onGenerateZip}
-        disabled={zipLocked}
+        disabled={!zipEnabled}
         title={
-          zipLocked
-            ? "Complete Usopp build verification first"
-            : "Download project ZIP"
+          exportReady
+            ? "Download verified project ZIP"
+            : "Complete mission with build & tests passed"
         }
       >
-        {zipLocked ? "ZIP Locked" : "Download ZIP"}
+        {exportReady ? "Export Ready ✅" : "Download ZIP"}
       </Button>
       <Button variant="ghost" size="sm" onClick={onTestExtract}>
         Test Extract

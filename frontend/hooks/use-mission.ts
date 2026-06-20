@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { AgentMessage } from "@/app/types/conversation";
 import type { AgentThought } from "@/app/types/thinking";
 import { createAgentMessage } from "@/lib/conversation";
@@ -28,6 +28,7 @@ import {
   runBuildVerification,
   type BuildVerificationResult,
 } from "@/lib/build-verification";
+import { computeExportState, logExportState } from "@/lib/export-state";
 import {
   clearArtifactStore,
   getArtifactProgressSteps,
@@ -447,7 +448,10 @@ export function useMission() {
       addMessage("Usopp", `QA Score: ${buildResult.qaScore}%`);
 
       if (!buildResult.complete) {
-        addMessage("System", "Export locked — build verification did not pass");
+        addMessage(
+          "System",
+          "Build verification incomplete — export unlocks when mission completes with build & tests passed"
+        );
       }
 
       setThought(
@@ -519,6 +523,18 @@ export function useMission() {
       setProgress(100);
       setCurrentAgent("Completed");
 
+      const exportStateAtComplete = computeExportState(
+        "Completed",
+        buildResult,
+        execReport,
+        verifiedProject
+      );
+      logExportState(exportStateAtComplete);
+
+      if (exportStateAtComplete.exportReady) {
+        addMessage("System", "Export Ready ✅ — Download ZIP enabled");
+      }
+
       setThought(
         createAgentThought(
           "System",
@@ -545,7 +561,18 @@ export function useMission() {
     } finally {
       setLoading(false);
     }
-  }, [requirement, addLog, addMessage, setThought]);
+  }, [addLog, addMessage, setThought]);
+
+  const exportState = useMemo(
+    () =>
+      computeExportState(
+        currentAgent,
+        buildVerification,
+        executionReport,
+        projectBundle
+      ),
+    [currentAgent, buildVerification, executionReport, projectBundle]
+  );
 
   const simulateMigrationApply = useCallback(() => {
     setDatabaseWorkflow((prev) => {
@@ -589,7 +616,14 @@ export function useMission() {
     liveExecutionSteps,
     buildVerification,
     buildVerificationRunning,
-    exportEnabled: buildVerification?.complete === true,
+    exportState,
+    canExport: exportState.canExport,
+    exportEnabled: exportState.exportEnabled,
+    exportReady: exportState.exportReady,
+    exportLocked: exportState.exportLocked,
+    validationPassed: exportState.validationPassed,
+    buildPassed: exportState.buildPassed,
+    testsPassed: exportState.testsPassed,
     artifactSteps,
     simulateMigrationApply,
     startMission,

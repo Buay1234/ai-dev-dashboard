@@ -126,6 +126,8 @@ export default function Home() {
 
     exportEnabled,
 
+    exportReady,
+
     startMission,
 
   } = useMission();
@@ -172,7 +174,7 @@ export default function Home() {
 
 
 
-  const projectZipLocked = Boolean(projectBundle) && !exportEnabled;
+  const projectZipLocked = Boolean(projectBundle) && !exportReady;
 
   const exportMarkdown = () => downloadMarkdownReport(agentResults);
 
@@ -180,7 +182,7 @@ export default function Home() {
 
   const generateZip = () => {
     if (projectBundle) {
-      if (!exportEnabled) return;
+      if (!exportReady) return;
       void exportGeneratedProjectZip(projectBundle, artifactBundle);
       return;
     }
@@ -366,6 +368,8 @@ export default function Home() {
 
               zipLocked={projectZipLocked}
 
+              exportReady={exportReady}
+
               onTestExtract={testExtract}
 
               onDebugFiles={() => console.log(extractFiles(zoroResult))}
@@ -430,6 +434,7 @@ export default function Home() {
             <BuildStatusPanel
               result={buildVerification}
               running={buildVerificationRunning}
+              exportReady={exportReady}
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -447,7 +452,7 @@ export default function Home() {
             <GeneratedFilesPanel
               project={projectBundle}
               artifactBundle={artifactBundle}
-              exportEnabled={exportEnabled}
+              exportEnabled={exportReady}
             />
 
             <DeliverablesPanel

@@ -175,10 +175,10 @@ export default function GeneratedFilesPanel({
                 title={
                   exportEnabled
                     ? "Export verified project"
-                    : "Complete Usopp build verification first"
+                    : "Complete mission with build & tests passed"
                 }
               >
-                {exportEnabled ? "Export ZIP" : "Export Locked"}
+                {exportEnabled ? "Export Ready ✅" : "Export Locked"}
               </button>
             ) : undefined
           }

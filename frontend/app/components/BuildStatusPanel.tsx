@@ -10,6 +10,7 @@ import EmptyState from "./ui/EmptyState";
 type Props = {
   result: BuildVerificationResult | null;
   running?: boolean;
+  exportReady?: boolean;
 };
 
 function PhaseRow({ label, status }: { label: string; status: string }) {
@@ -30,7 +31,7 @@ function PhaseRow({ label, status }: { label: string; status: string }) {
   );
 }
 
-export default function BuildStatusPanel({ result, running }: Props) {
+export default function BuildStatusPanel({ result, running, exportReady = false }: Props) {
   if (!result && !running) {
     return (
       <Card padding="md" className="border-yellow-500/25">
@@ -60,15 +61,13 @@ export default function BuildStatusPanel({ result, running }: Props) {
         title="Build Status"
         description="Usopp · Build Verification Agent"
         action={
-          result ? (
-            <span
-              className={`rounded-full border px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider ${
-                complete
-                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-                  : "border-amber-500/40 bg-amber-500/10 text-amber-300"
-              }`}
-            >
-              {complete ? "Verified" : "Blocked Export"}
+          exportReady ? (
+            <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-emerald-300">
+              Export Ready ✅
+            </span>
+          ) : result ? (
+            <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-300">
+              Export Locked
             </span>
           ) : undefined
         }
@@ -111,9 +110,15 @@ export default function BuildStatusPanel({ result, running }: Props) {
         </span>
       </div>
 
-      {result && !complete && (
+      {result && !exportReady && !complete && (
         <p className="mt-3 text-[10px] text-amber-400/90 font-mono">
-          Attempt {result.attempts}/{result.maxAttempts} — export locked until build passes
+          Attempt {result.attempts}/{result.maxAttempts} — waiting for mission completion
+        </p>
+      )}
+
+      {exportReady && (
+        <p className="mt-3 text-[10px] text-emerald-400/90 font-mono">
+          Mission complete · build & tests passed · export enabled
         </p>
       )}
 
