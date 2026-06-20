@@ -561,7 +561,7 @@ export function useMission() {
     } finally {
       setLoading(false);
     }
-  }, [addLog, addMessage, setThought]);
+  }, [requirement, addLog, addMessage, setThought]);
 
   const exportState = useMemo(
     () =>
