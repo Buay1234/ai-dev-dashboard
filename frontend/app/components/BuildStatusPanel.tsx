@@ -13,20 +13,28 @@ type Props = {
   exportReady?: boolean;
 };
 
-function PhaseRow({ label, status }: { label: string; status: string }) {
+function MetricRow({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string | number;
+  tone?: "neutral" | "good" | "bad" | "warn";
+}) {
   const color =
-    status === "PASS"
+    tone === "good"
       ? "text-emerald-400"
-      : status === "FAIL"
+      : tone === "bad"
         ? "text-red-400"
-        : status === "RUNNING"
+        : tone === "warn"
           ? "text-amber-400"
-          : "text-zinc-500";
+          : "text-text-secondary";
 
   return (
     <div className="flex items-center justify-between rounded-lg border border-border-subtle bg-surface-1 px-3 py-2">
       <span className="text-xs text-text-secondary">{label}</span>
-      <span className={`font-mono text-xs font-bold ${color}`}>{status}</span>
+      <span className={`font-mono text-xs font-bold ${color}`}>{value}</span>
     </div>
   );
 }
@@ -37,29 +45,29 @@ export default function BuildStatusPanel({ result, running, exportReady = false 
       <Card padding="md" className="border-yellow-500/25">
         <CardHeader
           title="Build Status"
-          description="Usopp · Build Verification Agent"
+          description="Usopp · V26 Build Integrity Verification"
         />
         <EmptyState
           icon="🔧"
           title="Awaiting build verification"
-          description="Usopp runs dotnet restore, build, and test after project generation."
+          description="Usopp runs dotnet restore and dotnet build MyProject.sln with real compiler output."
         />
       </Card>
     );
   }
 
+  const buildStatus = result?.buildStatus ?? "FAIL";
+  const compilerErrors = result?.compilerErrorCount ?? 0;
+  const compilerWarnings = result?.compilerWarningCount ?? 0;
   const restore = result ? phaseLabel(result.restore) : running ? "RUNNING" : "PENDING";
-  const build = result ? phaseLabel(result.build) : "PENDING";
-  const tests = result ? phaseLabel(result.tests) : "PENDING";
   const qaScore = result?.qaScore ?? 0;
-  const complete = result?.complete ?? false;
   const displayFixes = result ? dedupeFixMessages(result.errorsFixed) : [];
 
   return (
     <Card padding="md" className="border-yellow-500/25">
       <CardHeader
         title="Build Status"
-        description="Usopp · Build Verification Agent"
+        description="Usopp · V26 Build Integrity Verification"
         action={
           exportReady ? (
             <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-emerald-300">
@@ -74,9 +82,22 @@ export default function BuildStatusPanel({ result, running, exportReady = false 
       />
 
       <div className="space-y-2 mb-4">
-        <PhaseRow label="Restore" status={restore} />
-        <PhaseRow label="Build" status={build} />
-        <PhaseRow label="Tests" status={tests} />
+        <MetricRow
+          label="Build Status"
+          value={buildStatus}
+          tone={buildStatus === "PASS" ? "good" : running ? "warn" : "bad"}
+        />
+        <MetricRow
+          label="Compiler Errors"
+          value={compilerErrors}
+          tone={compilerErrors === 0 ? "good" : "bad"}
+        />
+        <MetricRow
+          label="Compiler Warnings"
+          value={compilerWarnings}
+          tone={compilerWarnings === 0 ? "good" : "warn"}
+        />
+        <MetricRow label="Restore" value={restore} tone={restore === "PASS" ? "good" : restore === "RUNNING" ? "warn" : "bad"} />
       </div>
 
       {displayFixes.length > 0 && (
@@ -110,15 +131,15 @@ export default function BuildStatusPanel({ result, running, exportReady = false 
         </span>
       </div>
 
-      {result && !exportReady && !complete && (
+      {result && !exportReady && (
         <p className="mt-3 text-[10px] text-amber-400/90 font-mono">
-          Attempt {result.attempts}/{result.maxAttempts} — waiting for mission completion
+          Attempt {result.attempts}/{result.maxAttempts} — export requires 0 compiler errors
         </p>
       )}
 
       {exportReady && (
         <p className="mt-3 text-[10px] text-emerald-400/90 font-mono">
-          Mission complete · build & tests passed · export enabled
+          dotnet build passed with 0 compiler errors · export enabled
         </p>
       )}
 
@@ -128,7 +149,7 @@ export default function BuildStatusPanel({ result, running, exportReady = false 
           animate={{ opacity: [0.5, 1, 0.5] }}
           transition={{ duration: 1.2, repeat: Infinity }}
         >
-          Usopp is running dotnet restore · build · test…
+          Usopp is running dotnet restore · dotnet build MyProject.sln…
         </motion.p>
       )}
     </Card>

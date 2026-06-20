@@ -2,6 +2,7 @@ import type { GeneratedProjectBundle, GeneratedSourceFile } from "@/lib/project-
 import {
   applyFixesFromErrors,
   applyProactiveFixes,
+  applyStructuralFixes,
   dedupeFixMessages,
   ensureProjectReferences,
 } from "./auto-fixer";
@@ -12,6 +13,7 @@ import type {
 import {
   MAX_BUILD_RETRIES,
   computeQaScore,
+  isBuildIntegrityVerified,
 } from "./types";
 
 export type BuildVerificationProgress = (
@@ -53,7 +55,6 @@ function isValidSolution(content: string): boolean {
   return content.includes("Project(") && content.includes("EndProject");
 }
 
-/** Static analysis fallback when dotnet SDK or API unavailable */
 function staticFallbackVerify(
   files: GeneratedSourceFile[],
   reason: string
@@ -68,26 +69,53 @@ function staticFallbackVerify(
   const structureOk =
     csFiles.length >= 8 && hasProgram && hasDbContext && hasSln && hasTests;
 
-  const testsOk =
-    hasTests &&
-    csFiles.some(
-      (f) => f.content.includes("[Fact]") && f.content.includes("using Xunit")
-    );
+  const errors = structureOk
+    ? []
+    : [{ code: "STATIC", message: "Project structure incomplete", raw: reason, severity: "error" as const }];
 
   return {
     restore: structureOk ? "pass" : "fail",
     build: structureOk ? "pass" : "fail",
-    tests: testsOk ? "pass" : structureOk ? "fail" : "fail",
+    tests: "fail",
     output: `Static verification (${reason})`,
-    errors: structureOk
-      ? []
-      : [{ code: "STATIC", message: "Project structure incomplete", raw: reason }],
+    errors,
+    warnings: [],
+    compilerErrorCount: structureOk ? 0 : 1,
+    compilerWarningCount: 0,
     sdkAvailable: false,
   };
 }
 
-function allPass(r: BuildVerifyApiResponse): boolean {
-  return r.restore === "pass" && r.build === "pass" && r.tests === "pass";
+function toVerificationResult(
+  lastResult: BuildVerifyApiResponse,
+  errorsFixed: string[],
+  attempt: number
+): BuildVerificationResult {
+  const verified = isBuildIntegrityVerified(
+    lastResult.restore,
+    lastResult.build,
+    lastResult.compilerErrorCount
+  );
+
+  return {
+    complete: verified,
+    restore: lastResult.restore,
+    build: lastResult.build,
+    tests: lastResult.tests,
+    buildStatus: verified ? "PASS" : "FAIL",
+    compilerErrorCount: lastResult.compilerErrorCount,
+    compilerWarningCount: lastResult.compilerWarningCount,
+    errorsFixed,
+    qaScore: computeQaScore(
+      lastResult.compilerErrorCount,
+      lastResult.compilerWarningCount,
+      verified,
+      attempt
+    ),
+    attempts: attempt,
+    maxAttempts: MAX_BUILD_RETRIES,
+    lastOutput: lastResult.output,
+  };
 }
 
 export async function runBuildVerification(
@@ -108,12 +136,19 @@ export async function runBuildVerification(
   files = refs.files;
   errorsFixed.push(...refs.fixes);
 
+  const structural = applyStructuralFixes(files);
+  files = structural.files;
+  errorsFixed.push(...structural.fixes);
+
   let lastResult: BuildVerifyApiResponse = {
     restore: "pending",
     build: "pending",
     tests: "pending",
     output: "",
     errors: [],
+    warnings: [],
+    compilerErrorCount: 0,
+    compilerWarningCount: 0,
     sdkAvailable: true,
   };
 
@@ -128,74 +163,46 @@ export async function runBuildVerification(
       restore: "running",
       build: "pending",
       tests: "pending",
+      buildStatus: "FAIL",
+      compilerErrorCount: 0,
+      compilerWarningCount: 0,
       errorsFixed: dedupeFixMessages(errorsFixed),
       complete: false,
     });
 
     lastResult = await callBuildVerifyApi(files);
 
-    onProgress?.({
-      attempts: attempt,
-      restore: lastResult.restore,
-      build: lastResult.build,
-      tests: lastResult.tests,
-      errorsFixed: dedupeFixMessages(errorsFixed),
-      lastOutput: lastResult.output.slice(0, 2000),
-      complete: false,
-    });
+    const partial = toVerificationResult(
+      lastResult,
+      dedupeFixMessages(errorsFixed),
+      attempt
+    );
+    onProgress?.({ ...partial, complete: false });
 
-    if (allPass(lastResult)) {
-      const deduped = dedupeFixMessages(errorsFixed);
-      const result: BuildVerificationResult = {
-        complete: true,
-        restore: lastResult.restore,
-        build: lastResult.build,
-        tests: lastResult.tests,
-        errorsFixed: deduped,
-        qaScore: computeQaScore(
-          lastResult.restore,
-          lastResult.build,
-          lastResult.tests,
-          attempt,
-          deduped.length
-        ),
-        attempts: attempt,
-        maxAttempts: MAX_BUILD_RETRIES,
-        lastOutput: lastResult.output,
-      };
-      onProgress?.({ ...result, errorsFixed: deduped });
-      return { result, sourceFiles: files };
+    if (partial.complete) {
+      onProgress?.({ ...partial, complete: true });
+      return { result: partial, sourceFiles: files };
     }
 
     const fixes = applyFixesFromErrors(lastResult.errors, files);
-    if (fixes.fixes.length === 0) {
-      break;
-    }
-
     files = fixes.files;
     errorsFixed.push(...fixes.fixes);
+
+    const retryStructural = applyStructuralFixes(files);
+    files = retryStructural.files;
+    errorsFixed.push(...retryStructural.fixes);
+
+    if (fixes.fixes.length === 0 && retryStructural.fixes.length === 0) {
+      break;
+    }
   }
 
-  const deduped = dedupeFixMessages(errorsFixed);
-  const result: BuildVerificationResult = {
-    complete: allPass(lastResult),
-    restore: lastResult.restore,
-    build: lastResult.build,
-    tests: lastResult.tests,
-    errorsFixed: deduped,
-    qaScore: computeQaScore(
-      lastResult.restore,
-      lastResult.build,
-      lastResult.tests,
-      lastAttempt,
-      deduped.length
-    ),
-    attempts: lastAttempt,
-    maxAttempts: MAX_BUILD_RETRIES,
-    lastOutput: lastResult.output,
-  };
-
-  onProgress?.({ ...result, errorsFixed: deduped });
+  const result = toVerificationResult(
+    lastResult,
+    dedupeFixMessages(errorsFixed),
+    lastAttempt
+  );
+  onProgress?.({ ...result });
   return { result, sourceFiles: files };
 }
 

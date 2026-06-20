@@ -3,8 +3,13 @@ import { promisify } from "util";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
-import { parseCompilerOutput } from "@/lib/build-verification/error-parser";
+import {
+  parseCompilerOutput,
+  parseCompilerWarnings,
+  resolveCompilerCounts,
+} from "@/lib/build-verification/error-parser";
 import type { BuildVerifyApiResponse, PhaseStatus } from "@/lib/build-verification/types";
+import { PROJECT_NAMESPACE } from "@/lib/project-generator/types";
 
 const execAsync = promisify(exec);
 
@@ -14,8 +19,8 @@ async function runCommand(cwd: string, command: string) {
   try {
     const { stdout, stderr } = await execAsync(command, {
       cwd,
-      timeout: 120_000,
-      maxBuffer: 4 * 1024 * 1024,
+      timeout: 180_000,
+      maxBuffer: 8 * 1024 * 1024,
       windowsHide: true,
     });
     return { code: 0, output: stdout + stderr };
@@ -28,8 +33,8 @@ async function runCommand(cwd: string, command: string) {
   }
 }
 
-function statusFromCode(code: number): PhaseStatus {
-  return code === 0 ? "pass" : "fail";
+function statusFromBuild(exitCode: number, compilerErrorCount: number): PhaseStatus {
+  return exitCode === 0 && compilerErrorCount === 0 ? "pass" : "fail";
 }
 
 async function checkDotnetSdk(): Promise<boolean> {
@@ -41,20 +46,29 @@ function isValidSolution(content: string): boolean {
   return content.includes("Project(") && content.includes("EndProject");
 }
 
-function resolveBuildTarget(files: FilePayload[]): string {
-  const sln = files.find((f) => f.path.endsWith(".sln"));
+function resolveSolutionTarget(files: FilePayload[]): string {
+  const sln =
+    files.find((f) => f.path.endsWith(`${PROJECT_NAMESPACE}.sln`)) ??
+    files.find((f) => f.path.endsWith(".sln"));
   if (sln && isValidSolution(sln.content)) {
     return path.basename(sln.path);
   }
+  return `${PROJECT_NAMESPACE}.sln`;
+}
 
-  const tests = files.find((f) => f.path.endsWith(".Tests.csproj"));
-  if (tests) return tests.path;
-
-  const api = files.find((f) => f.path.endsWith(".API.csproj"));
-  if (api) return api.path;
-
-  const anyCsproj = files.find((f) => f.path.endsWith(".csproj"));
-  return anyCsproj?.path ?? "";
+function emptyResponse(partial: Partial<BuildVerifyApiResponse>): BuildVerifyApiResponse {
+  return {
+    restore: "fail",
+    build: "fail",
+    tests: "pending",
+    output: "",
+    errors: [],
+    warnings: [],
+    compilerErrorCount: 0,
+    compilerWarningCount: 0,
+    sdkAvailable: false,
+    ...partial,
+  };
 }
 
 export async function POST(req: Request) {
@@ -70,17 +84,16 @@ export async function POST(req: Request) {
 
     const sdkAvailable = await checkDotnetSdk();
     if (!sdkAvailable) {
-      return Response.json({
-        restore: "fail",
-        build: "fail",
-        tests: "fail",
-        output: "dotnet SDK not found on server",
-        errors: [{ code: "SDK", message: "dotnet SDK not available", raw: "" }],
-        sdkAvailable: false,
-      } satisfies BuildVerifyApiResponse);
+      return Response.json(
+        emptyResponse({
+          output: "dotnet SDK not found on server",
+          errors: [{ code: "SDK", message: "dotnet SDK not available", raw: "", severity: "error" }],
+          compilerErrorCount: 1,
+        })
+      );
     }
 
-    workDir = path.join(os.tmpdir(), `ai-build-${Date.now()}`);
+    workDir = path.join(os.tmpdir(), `ai-build-v26-${Date.now()}`);
     await fs.mkdir(workDir, { recursive: true });
 
     for (const file of files) {
@@ -89,45 +102,81 @@ export async function POST(req: Request) {
       await fs.writeFile(fullPath, file.content, "utf8");
     }
 
-    const buildTarget = resolveBuildTarget(files);
-    const targetArg = buildTarget ? `"${buildTarget.replace(/\//g, path.sep)}"` : "";
+    const slnTarget = resolveSolutionTarget(files);
+    const slnArg = `"${slnTarget.replace(/\//g, path.sep)}"`;
 
     let restore: PhaseStatus = "fail";
     let build: PhaseStatus = "fail";
-    let tests: PhaseStatus = "fail";
+    let tests: PhaseStatus = "pending";
     let combinedOutput = "";
 
-    const restoreCmd = targetArg ? `dotnet restore ${targetArg}` : "dotnet restore";
-    const restoreResult = await runCommand(workDir, restoreCmd);
+    const restoreResult = await runCommand(workDir, `dotnet restore ${slnArg}`);
     combinedOutput += restoreResult.output;
-    restore = statusFromCode(restoreResult.code);
+
+    const restoreErrors = parseCompilerOutput(restoreResult.output);
+    const restoreWarnings = parseCompilerWarnings(restoreResult.output);
+    const restoreCounts = resolveCompilerCounts(
+      restoreResult.output,
+      restoreErrors,
+      restoreWarnings
+    );
+
+    restore =
+      restoreResult.code === 0 && restoreCounts.compilerErrorCount === 0
+        ? "pass"
+        : "fail";
 
     if (restore === "pass") {
-      const buildCmd = targetArg
-        ? `dotnet build ${targetArg} --no-restore`
-        : "dotnet build --no-restore";
-      const buildResult = await runCommand(workDir, buildCmd);
+      const buildResult = await runCommand(
+        workDir,
+        `dotnet build ${slnArg} --no-restore`
+      );
       combinedOutput += "\n" + buildResult.output;
-      build = statusFromCode(buildResult.code);
+
+      const buildErrors = parseCompilerOutput(buildResult.output);
+      const buildWarnings = parseCompilerWarnings(buildResult.output);
+      const buildCounts = resolveCompilerCounts(
+        combinedOutput,
+        [...restoreErrors, ...buildErrors],
+        [...restoreWarnings, ...buildWarnings]
+      );
+
+      build = statusFromBuild(buildResult.code, buildCounts.compilerErrorCount);
 
       if (build === "pass") {
-        const testCmd = targetArg
-          ? `dotnet test ${targetArg} --no-build --verbosity quiet`
-          : "dotnet test --no-build --verbosity quiet";
-        const testResult = await runCommand(workDir, testCmd);
+        const testResult = await runCommand(
+          workDir,
+          `dotnet test ${slnArg} --no-build --verbosity quiet`
+        );
         combinedOutput += "\n" + testResult.output;
-        tests = statusFromCode(testResult.code);
+        tests = testResult.code === 0 ? "pass" : "fail";
+      } else {
+        tests = "fail";
       }
+    } else {
+      tests = "fail";
     }
 
     const errors = parseCompilerOutput(combinedOutput);
+    const warnings = parseCompilerWarnings(combinedOutput);
+    const { compilerErrorCount, compilerWarningCount } = resolveCompilerCounts(
+      combinedOutput,
+      errors,
+      warnings
+    );
+
+    build =
+      restore === "pass" && compilerErrorCount === 0 ? "pass" : "fail";
 
     const response: BuildVerifyApiResponse = {
       restore,
       build,
       tests,
-      output: combinedOutput.slice(-8000),
+      output: combinedOutput.slice(-12000),
       errors,
+      warnings,
+      compilerErrorCount,
+      compilerWarningCount,
       sdkAvailable: true,
     };
 
@@ -135,14 +184,11 @@ export async function POST(req: Request) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Build verify failed";
     return Response.json(
-      {
-        restore: "fail",
-        build: "fail",
-        tests: "fail",
+      emptyResponse({
         output: message,
-        errors: [{ code: "ERR", message, raw: message }],
-        sdkAvailable: false,
-      } satisfies BuildVerifyApiResponse,
+        errors: [{ code: "ERR", message, raw: message, severity: "error" }],
+        compilerErrorCount: 1,
+      }),
       { status: 500 }
     );
   } finally {

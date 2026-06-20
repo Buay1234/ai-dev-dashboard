@@ -72,8 +72,22 @@ function defaultFields(entityName: string): EntityField[] {
   ];
 }
 
+const RESERVED_ENTITY_NAMES = new Set([
+  "System", "Task", "Object", "String", "Guid", "Type", "Enum", "Void",
+  "Int32", "Boolean", "DateTime", "Exception", "Action", "Func", "Thread",
+  "Timer", "Math", "Console", "Convert", "Char", "Byte", "Int16", "Int64",
+  "Single", "Double", "Decimal", "Array", "EventArgs",
+]);
+
+function sanitizeEntityName(name: string): string {
+  if (RESERVED_ENTITY_NAMES.has(name) && !name.endsWith("Entity")) {
+    return `${name}Entity`;
+  }
+  return name;
+}
+
 function entityFromName(name: string): EntityDefinition {
-  const pascal = toPascalCase(toSingular(name));
+  const pascal = sanitizeEntityName(toPascalCase(toSingular(name)));
   return {
     name: pascal,
     tableName: pascal.endsWith("s") ? pascal : `${pascal}s`,

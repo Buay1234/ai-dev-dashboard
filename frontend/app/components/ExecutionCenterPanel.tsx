@@ -111,8 +111,11 @@ export default function ExecutionCenterPanel({ report, liveSteps }: Props) {
 
       {tests && (
         <div className="rounded-lg border border-border-subtle bg-slate-950/80 p-4">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-text-muted mb-3">
+          <p className="text-[10px] font-mono uppercase tracking-widest text-text-muted mb-1">
             Unit Test Summary · Usopp
+          </p>
+          <p className="text-[10px] text-amber-400/80 font-mono mb-3">
+            Structural simulation only — see Build Status for real dotnet compiler results
           </p>
           <div className="grid grid-cols-3 gap-3 text-center">
             <Stat label="Total" value={tests.total} />

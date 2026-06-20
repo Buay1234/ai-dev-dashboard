@@ -1,5 +1,4 @@
 import type { BuildVerificationResult } from "@/lib/build-verification/types";
-import type { ExecutionReport } from "@/lib/execution/execution-types";
 import type { GeneratedProjectBundle } from "@/lib/project-generator/types";
 
 export type ExportState = {
@@ -8,6 +7,8 @@ export type ExportState = {
   buildPassed: boolean;
   testsPassed: boolean;
   generatedFilesCount: number;
+  compilerErrorCount: number;
+  compilerWarningCount: number;
   canExport: boolean;
   exportEnabled: boolean;
   exportReady: boolean;
@@ -19,37 +20,23 @@ export type ExportState = {
 export function computeExportState(
   currentAgent: string,
   buildVerification: BuildVerificationResult | null,
-  executionReport: ExecutionReport | null,
   projectBundle: GeneratedProjectBundle | null
 ): ExportState {
   const missionStatus =
     currentAgent === "Completed" ? "complete" : currentAgent.toLowerCase();
   const missionComplete = currentAgent === "Completed";
 
-  const buildFromVerification = buildVerification?.build === "pass";
-  const buildFromExecution =
-    executionReport?.steps.find((s) => s.id === "dotnet-build")?.status ===
-    "success";
+  const compilerErrorCount = buildVerification?.compilerErrorCount ?? -1;
+  const compilerWarningCount = buildVerification?.compilerWarningCount ?? 0;
   const buildPassed =
-    buildFromVerification ||
-    buildFromExecution ||
-    buildVerification?.complete === true;
-
-  const testsFromVerification = buildVerification?.tests === "pass";
-  const testsFromExecution =
-    (executionReport?.testSummary.failed ?? 1) === 0 &&
-    (executionReport?.testSummary.total ?? 0) > 0;
-  const testsPassed =
-    testsFromVerification ||
-    testsFromExecution ||
-    buildVerification?.complete === true;
-
+    buildVerification?.build === "pass" && compilerErrorCount === 0;
+  const testsPassed = buildVerification?.tests === "pass";
   const generatedFilesCount = projectBundle?.sourceFiles.length ?? 0;
 
   const canExport =
     missionComplete &&
     buildPassed &&
-    testsPassed &&
+    compilerErrorCount === 0 &&
     generatedFilesCount > 0;
 
   return {
@@ -58,27 +45,28 @@ export function computeExportState(
     buildPassed,
     testsPassed,
     generatedFilesCount,
+    compilerErrorCount,
+    compilerWarningCount,
     canExport,
     exportEnabled: canExport,
     exportReady: canExport,
     exportLocked: !canExport,
-    validationPassed: buildPassed && testsPassed,
+    validationPassed: buildPassed && compilerErrorCount === 0,
     buildVerificationComplete: buildVerification?.complete === true,
   };
 }
 
 export function logExportState(state: ExportState): void {
-  console.log("[Export State]", {
+  console.log("[Export State V26]", {
     missionStatus: state.missionStatus,
     missionComplete: state.missionComplete,
     buildPassed: state.buildPassed,
     testsPassed: state.testsPassed,
+    compilerErrorCount: state.compilerErrorCount,
+    compilerWarningCount: state.compilerWarningCount,
     generatedFilesCount: state.generatedFilesCount,
     canExport: state.canExport,
-    exportEnabled: state.exportEnabled,
     exportReady: state.exportReady,
     exportLocked: state.exportLocked,
-    validationPassed: state.validationPassed,
-    buildVerificationComplete: state.buildVerificationComplete,
   });
 }

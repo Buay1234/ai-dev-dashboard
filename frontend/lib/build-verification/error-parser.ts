@@ -1,60 +1,123 @@
 import type { ParsedCompilerError } from "./types";
 
-const ERROR_LINE =
-  /(?:^|\n)(?:.*?\\)?([^(\n]+\.cs)\((\d+),(\d+)\):\s*error\s+(CS\d+|NU\d+|MSB\d+):\s*(.+)/gi;
+const DIAGNOSTIC_LINE =
+  /(?:^|\n)(?:.*?\\)?([^(\n]+\.(?:cs|csproj))\((\d+),(\d+)\):\s*(error|warning)\s+(CS\d+|NU\d+|MSB\d+):\s*(.+)/gi;
 
-const SIMPLE_ERROR = /error\s+(CS\d+|NU\d+|MSB\d+):\s*(.+)/gi;
+const SIMPLE_DIAGNOSTIC =
+  /(?:^|\n).+?:\s*(error|warning)\s+(CS\d+|NU\d+|MSB\d+):\s*(.+)/gi;
 
-const RESTORE_ERROR = /(?:error|ERROR)\s+(NU\d+|MSB\d+):\s*(.+)/gi;
+const RESTORE_ERROR = /(?:^|\n).*?(?:error|ERROR)\s+(NU\d+|MSB\d+):\s*(.+)/gi;
+
+const SUMMARY_ERRORS = /(\d+)\s+Error\(s\)/i;
+const SUMMARY_WARNINGS = /(\d+)\s+Warning\(s\)/i;
+
+function pushDiagnostic(
+  bucket: ParsedCompilerError[],
+  seen: Set<string>,
+  entry: ParsedCompilerError
+) {
+  const key = `${entry.severity}:${entry.file ?? ""}:${entry.line ?? ""}:${entry.code}:${entry.message}`;
+  if (seen.has(key)) return;
+  seen.add(key);
+  bucket.push(entry);
+}
 
 export function parseCompilerOutput(output: string): ParsedCompilerError[] {
   const errors: ParsedCompilerError[] = [];
   const seen = new Set<string>();
 
   let match: RegExpExecArray | null;
-  ERROR_LINE.lastIndex = 0;
-  while ((match = ERROR_LINE.exec(output)) !== null) {
-    const key = `${match[4]}:${match[5]}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    errors.push({
+  DIAGNOSTIC_LINE.lastIndex = 0;
+  while ((match = DIAGNOSTIC_LINE.exec(output)) !== null) {
+    if (match[5].toLowerCase() !== "error") continue;
+    pushDiagnostic(errors, seen, {
       file: match[1].trim().replace(/^.*[\\/]/, ""),
       line: Number(match[2]),
-      code: match[4],
-      message: match[5].trim(),
+      code: match[6],
+      message: match[7].trim(),
       raw: match[0].trim(),
+      severity: "error",
     });
   }
 
-  if (errors.length === 0) {
-    SIMPLE_ERROR.lastIndex = 0;
-    while ((match = SIMPLE_ERROR.exec(output)) !== null) {
-      const key = `${match[1]}:${match[2]}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      errors.push({
-        code: match[1],
-        message: match[2].trim(),
-        raw: match[0].trim(),
-      });
-    }
+  SIMPLE_DIAGNOSTIC.lastIndex = 0;
+  while ((match = SIMPLE_DIAGNOSTIC.exec(output)) !== null) {
+    if (match[1].toLowerCase() !== "error") continue;
+    pushDiagnostic(errors, seen, {
+      code: match[2],
+      message: match[3].trim(),
+      raw: match[0].trim(),
+      severity: "error",
+    });
   }
 
-  if (errors.length === 0) {
-    RESTORE_ERROR.lastIndex = 0;
-    while ((match = RESTORE_ERROR.exec(output)) !== null) {
-      const key = `${match[1]}:${match[2]}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      errors.push({
-        code: match[1],
-        message: match[2].trim(),
-        raw: match[0].trim(),
-      });
-    }
+  RESTORE_ERROR.lastIndex = 0;
+  while ((match = RESTORE_ERROR.exec(output)) !== null) {
+    pushDiagnostic(errors, seen, {
+      code: match[1],
+      message: match[2].trim(),
+      raw: match[0].trim(),
+      severity: "error",
+    });
   }
 
   return errors;
+}
+
+export function parseCompilerWarnings(output: string): ParsedCompilerError[] {
+  const warnings: ParsedCompilerError[] = [];
+  const seen = new Set<string>();
+
+  let match: RegExpExecArray | null;
+  DIAGNOSTIC_LINE.lastIndex = 0;
+  while ((match = DIAGNOSTIC_LINE.exec(output)) !== null) {
+    if (match[5].toLowerCase() !== "warning") continue;
+    pushDiagnostic(warnings, seen, {
+      file: match[1].trim().replace(/^.*[\\/]/, ""),
+      line: Number(match[2]),
+      code: match[6],
+      message: match[7].trim(),
+      raw: match[0].trim(),
+      severity: "warning",
+    });
+  }
+
+  SIMPLE_DIAGNOSTIC.lastIndex = 0;
+  while ((match = SIMPLE_DIAGNOSTIC.exec(output)) !== null) {
+    if (match[1].toLowerCase() !== "warning") continue;
+    pushDiagnostic(warnings, seen, {
+      code: match[2],
+      message: match[3].trim(),
+      raw: match[0].trim(),
+      severity: "warning",
+    });
+  }
+
+  return warnings;
+}
+
+export function parseBuildSummary(output: string): {
+  errorCount: number;
+  warningCount: number;
+} {
+  const errorMatch = output.match(SUMMARY_ERRORS);
+  const warningMatch = output.match(SUMMARY_WARNINGS);
+  return {
+    errorCount: errorMatch ? Number(errorMatch[1]) : 0,
+    warningCount: warningMatch ? Number(warningMatch[1]) : 0,
+  };
+}
+
+export function resolveCompilerCounts(
+  output: string,
+  parsedErrors: ParsedCompilerError[],
+  parsedWarnings: ParsedCompilerError[]
+): { compilerErrorCount: number; compilerWarningCount: number } {
+  const summary = parseBuildSummary(output);
+  return {
+    compilerErrorCount: Math.max(summary.errorCount, parsedErrors.length),
+    compilerWarningCount: Math.max(summary.warningCount, parsedWarnings.length),
+  };
 }
 
 export function inferMissingUsings(message: string): string[] {

@@ -144,12 +144,128 @@ export function applyProactiveFixes(files: GeneratedSourceFile[]): {
   fixes: string[];
 } {
   const allFixes: string[] = [];
-  const next = files.map((file) => {
+  const withUsings = files.map((file) => {
     const { file: updated, fixes } = fixFileUsings(file, STANDARD_USINGS);
     allFixes.push(...fixes);
     return updated;
   });
-  return { files: next, fixes: dedupeFixMessages(allFixes) };
+  const structural = applyStructuralFixes(withUsings);
+  allFixes.push(...structural.fixes);
+  return { files: structural.files, fixes: dedupeFixMessages(allFixes) };
+}
+
+const RESERVED_ENTITY_NAMES = new Set([
+  "System",
+  "Task",
+  "Object",
+  "String",
+  "Guid",
+  "Type",
+  "Enum",
+  "Void",
+  "Int32",
+  "Boolean",
+  "DateTime",
+  "Exception",
+  "Action",
+  "Func",
+  "Thread",
+  "Timer",
+  "Math",
+  "Console",
+  "Convert",
+  "Char",
+  "Byte",
+  "Int16",
+  "Int64",
+  "Single",
+  "Double",
+  "Decimal",
+  "Array",
+  "EventArgs",
+]);
+
+function fixDuplicateDbSets(content: string): { content: string; fixed: boolean } {
+  const seenProps = new Set<string>();
+  const seenTypes = new Set<string>();
+  let fixed = false;
+
+  const next = content.split("\n").filter((line) => {
+    const match = line.match(/public DbSet<(\w+)>\s+(\w+)/);
+    if (!match) return true;
+    const [, typeName, propName] = match;
+    if (seenProps.has(propName) || seenTypes.has(typeName)) {
+      fixed = true;
+      return false;
+    }
+    seenProps.add(propName);
+    seenTypes.add(typeName);
+    return true;
+  });
+
+  return { content: next.join("\n"), fixed };
+}
+
+function fixReservedEntityNames(files: GeneratedSourceFile[]): {
+  files: GeneratedSourceFile[];
+  fixes: string[];
+} {
+  const fixes: string[] = [];
+  const renames = new Map<string, string>();
+
+  for (const file of files) {
+    if (!file.fileName.endsWith(".cs")) continue;
+    const baseName = file.fileName.replace(".cs", "");
+    const classMatch = file.content.match(/public class (\w+)/);
+    const name = classMatch?.[1] ?? baseName;
+    if (RESERVED_ENTITY_NAMES.has(name) && !name.endsWith("Entity")) {
+      renames.set(name, `${name}Entity`);
+    }
+  }
+
+  if (renames.size === 0) {
+    return { files, fixes };
+  }
+
+  const next = files.map((file) => {
+    let content = file.content;
+    let fileName = file.fileName;
+
+    for (const [oldName, newName] of renames) {
+      if (fileName === `${oldName}.cs`) {
+        fileName = `${newName}.cs`;
+        fixes.push(`Renamed entity ${oldName} → ${newName} (reserved .NET namespace)`);
+      }
+      content = content.replace(new RegExp(`\\b${oldName}\\b`, "g"), newName);
+    }
+
+    if (content !== file.content || fileName !== file.fileName) {
+      return { ...file, content, fileName };
+    }
+    return file;
+  });
+
+  return { files: next, fixes: dedupeFixMessages(fixes) };
+}
+
+export function applyStructuralFixes(files: GeneratedSourceFile[]): {
+  files: GeneratedSourceFile[];
+  fixes: string[];
+} {
+  const fixes: string[] = [];
+  let next = files.map((file) => {
+    if (file.fileName !== "AppDbContext.cs") return file;
+    const result = fixDuplicateDbSets(file.content);
+    if (!result.fixed) return file;
+    fixes.push("Removed duplicate DbSet declarations");
+    return { ...file, content: result.content };
+  });
+
+  const renamed = fixReservedEntityNames(next);
+  next = renamed.files;
+  fixes.push(...renamed.fixes);
+
+  return { files: next, fixes: dedupeFixMessages(fixes) };
 }
 
 export function applyFixesFromErrors(

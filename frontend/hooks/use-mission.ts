@@ -420,6 +420,9 @@ export function useMission() {
             restore: "pending",
             build: "pending",
             tests: "pending",
+            buildStatus: "FAIL",
+            compilerErrorCount: 0,
+            compilerWarningCount: 0,
             qaScore: 0,
             attempts: 0,
             maxAttempts: 5,
@@ -443,14 +446,14 @@ export function useMission() {
       }
       addMessage(
         "Usopp",
-        `Build verification — Restore: ${buildResult.restore}, Build: ${buildResult.build}, Tests: ${buildResult.tests}`
+        `V26 Build Integrity — Restore: ${buildResult.restore}, Build: ${buildResult.buildStatus}, Compiler Errors: ${buildResult.compilerErrorCount}, Warnings: ${buildResult.compilerWarningCount}`
       );
       addMessage("Usopp", `QA Score: ${buildResult.qaScore}%`);
 
       if (!buildResult.complete) {
         addMessage(
           "System",
-          "Build verification incomplete — export unlocks when mission completes with build & tests passed"
+          `Export locked — ${buildResult.compilerErrorCount} compiler error(s) remain after dotnet build`
         );
       }
 
@@ -460,9 +463,9 @@ export function useMission() {
           "Testing",
           [
             `Restore: ${buildResult.restore}`,
-            `Build: ${buildResult.build}`,
-            `Tests: ${buildResult.tests}`,
-            `QA Score: ${buildResult.qaScore}%`,
+            `Build: ${buildResult.buildStatus}`,
+            `Compiler Errors: ${buildResult.compilerErrorCount}`,
+            `Warnings: ${buildResult.compilerWarningCount}`,
           ],
           buildResult.complete ? "Build verified" : "Build needs fixes",
           94
@@ -526,7 +529,6 @@ export function useMission() {
       const exportStateAtComplete = computeExportState(
         "Completed",
         buildResult,
-        execReport,
         verifiedProject
       );
       logExportState(exportStateAtComplete);
@@ -565,13 +567,8 @@ export function useMission() {
 
   const exportState = useMemo(
     () =>
-      computeExportState(
-        currentAgent,
-        buildVerification,
-        executionReport,
-        projectBundle
-      ),
-    [currentAgent, buildVerification, executionReport, projectBundle]
+      computeExportState(currentAgent, buildVerification, projectBundle),
+    [currentAgent, buildVerification, projectBundle]
   );
 
   const simulateMigrationApply = useCallback(() => {
