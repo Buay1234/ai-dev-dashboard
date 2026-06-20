@@ -9,7 +9,8 @@ export async function POST(req: Request) {
     const output = await runUsoppAgent(
       frankyOutput,
       zoroOutput,
-      body.businessAnalysis
+      body.businessAnalysis,
+      body.databaseDesign
     );
 
     return Response.json(output);

@@ -21,6 +21,7 @@ import RuntimeVerificationPanel from "./components/RuntimeVerificationPanel";
 import BusinessAnalysisPanel from "./components/BusinessAnalysisPanel";
 import DomainKnowledgePanel from "./components/DomainKnowledgePanel";
 import BusinessArchitecturePanel from "./components/BusinessArchitecturePanel";
+import DatabaseDesignPanel from "./components/DatabaseDesignPanel";
 
 import DashboardStats from "./components/DashboardStats";
 
@@ -140,6 +141,8 @@ export default function Home() {
     architectureContract,
 
     businessArchitecturePlan,
+
+    databaseDesignContract,
 
     exportEnabled,
 
@@ -388,6 +391,11 @@ export default function Home() {
             <BusinessArchitecturePanel
               plan={businessArchitecturePlan}
               loading={loading && !businessArchitecturePlan && Boolean(requirement.trim())}
+            />
+
+            <DatabaseDesignPanel
+              contract={databaseDesignContract}
+              loading={loading && !databaseDesignContract && Boolean(requirement.trim())}
             />
 
             <ExportToolbar

@@ -11,6 +11,7 @@ import {
   migrationFilesToArtifacts,
 } from "./migration-service";
 import type { ProjectArtifact } from "@/app/types/artifacts";
+import type { DatabaseDesignContract } from "@/lib/database-designer/entity-relationship";
 
 export type DatabaseWorkflowResult = {
   workflow: DatabaseWorkflowState;
@@ -19,11 +20,12 @@ export type DatabaseWorkflowResult = {
 };
 
 export function runDatabaseMigrationWorkflow(
-  entities: EntityDefinition[]
+  entities: EntityDefinition[],
+  databaseDesign?: DatabaseDesignContract | null
 ): DatabaseWorkflowResult {
   const dbContext = generateAppDbContextV24(entities);
-  const configurations = generateEntityConfigurations(entities);
-  const migrationFiles = generateMigrationFiles(entities);
+  const configurations = generateEntityConfigurations(entities, databaseDesign);
+  const migrationFiles = generateMigrationFiles(entities, databaseDesign);
   const preview = generateMigrationPreview(entities, migrationFiles);
 
   const progressSteps = getMigrationProgressSteps().map((step) => ({

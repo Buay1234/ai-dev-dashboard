@@ -5,6 +5,12 @@ import { extractEntities } from "./entity-parser";
 import type { RequirementAnalysisContract } from "@/lib/requirement-parser";
 import type { ArchitectureContract } from "@/lib/domain-library/types";
 import {
+  applyDatabaseDesignToEntities,
+  designDatabase,
+  exportErDiagramJson,
+  type DatabaseDesignContract,
+} from "@/lib/database-designer";
+import {
   generateEntityClasses,
   generateRepositories,
 } from "./entity-generator";
@@ -159,26 +165,48 @@ function generateApiCsproj(): GeneratedSourceFile {
   };
 }
 
+function uniqueEntityDefinitions(entities: EntityDefinition[]): EntityDefinition[] {
+  return [...new Map(entities.map((e) => [e.name, e])).values()];
+}
+
 export function generateProjectBundle(
   outputs: AgentOutputs,
   requirement: string,
   analysis?: RequirementAnalysisContract | null,
-  architecture?: ArchitectureContract | null
+  architecture?: ArchitectureContract | null,
+  databaseDesign?: DatabaseDesignContract | null
 ): GeneratedProjectBundle {
-  const entities = extractEntities(
-    outputs.robin,
-    outputs.zoro,
-    requirement,
-    analysis,
-    architecture
+  const rawEntities = uniqueEntityDefinitions(
+    extractEntities(outputs.robin, outputs.zoro, requirement, analysis, architecture)
   );
-  const databaseResult = runDatabaseMigrationWorkflow(entities);
+
+  const resolvedDesign =
+    databaseDesign ?? (architecture ? designDatabase(architecture) : null);
+
+  const entities = resolvedDesign
+    ? applyDatabaseDesignToEntities(rawEntities, resolvedDesign.foreignKeys)
+    : rawEntities;
+
+  const databaseResult = runDatabaseMigrationWorkflow(entities, resolvedDesign);
+
+  const erDiagramFile: GeneratedSourceFile | null = resolvedDesign
+    ? {
+        id: "er-diagram-json",
+        path: "docs/database",
+        fileName: "ErDiagram.json",
+        category: "docs",
+        agent: "Franky",
+        language: "markdown",
+        content: exportErDiagramJson(resolvedDesign),
+      }
+    : null;
 
   const baseFiles: GeneratedSourceFile[] = [
     generateRobinEntityDoc(entities, outputs.robin),
     generateSqlScript(entities),
     generateDatabaseDesignDoc(entities, outputs.zoro),
-    ...generateEntityClasses(entities),
+    ...(erDiagramFile ? [erDiagramFile] : []),
+    ...generateEntityClasses(entities, resolvedDesign),
     ...generateRepositories(entities),
     ...generateDtoFiles(entities),
     ...generateCrudControllers(entities),

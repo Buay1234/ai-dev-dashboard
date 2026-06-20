@@ -48,6 +48,11 @@ import {
   type BusinessArchitecturePlan,
 } from "@/lib/architecture";
 import {
+  designDatabase,
+  formatDatabaseDesignForAgent,
+  type DatabaseDesignContract,
+} from "@/lib/database-designer";
+import {
   clearArtifactStore,
   getArtifactProgressSteps,
   getProjectGenerationSteps,
@@ -122,6 +127,8 @@ export function useMission() {
     useState<ArchitectureContract | null>(null);
   const [businessArchitecturePlan, setBusinessArchitecturePlan] =
     useState<BusinessArchitecturePlan | null>(null);
+  const [databaseDesignContract, setDatabaseDesignContract] =
+    useState<DatabaseDesignContract | null>(null);
   const [artifactSteps, setArtifactSteps] = useState<ArtifactProgressStep[]>([]);
 
   const setThought = useCallback((entry: AgentThought) => {
@@ -169,6 +176,7 @@ export function useMission() {
       setRequirementAnalysis(null);
       setArchitectureContract(null);
       setBusinessArchitecturePlan(null);
+      setDatabaseDesignContract(null);
       setArtifactSteps([]);
       clearArtifactStore();
       setRobinResult("");
@@ -207,6 +215,9 @@ export function useMission() {
       const architecturePlan = generateBusinessArchitecture(analysis, architecture);
       setBusinessArchitecturePlan(architecturePlan);
 
+      const databaseDesign = designDatabase(architecture);
+      setDatabaseDesignContract(databaseDesign);
+
       addLog(
         `V28 Requirement Parser — domain: ${analysis.domain}, entities: ${analysis.entities.length}, confidence: ${analysis.confidenceScore}%`
       );
@@ -218,6 +229,9 @@ export function useMission() {
       addLog(
         `V30 Business Architecture — ${architecturePlan.architectureType} · complexity ${architecturePlan.complexityScore} · confidence ${architecturePlan.confidenceScore}%`
       );
+      addLog(
+        `V31 Database Designer — ${databaseDesign.relationships.length} relationships · ${databaseDesign.foreignKeys.length} foreign keys · ${databaseDesign.cascadeRules.length} cascade rules`
+      );
       addMessage(
         "System",
         `Business Analysis — ${analysis.domain} · ${architecture.entities.join(", ")}`
@@ -226,6 +240,8 @@ export function useMission() {
         "System",
         `Architecture Plan — ${architecturePlan.architectureType} with ${architecturePlan.patterns.length} patterns`
       );
+
+      const databaseDesignPayload = formatDatabaseDesignForAgent(databaseDesign);
 
       const domainAnalysisPayload = formatArchitectureContractForAgent(architecture);
       const agentArchitecturePayload = buildAgentArchitectureContext(
@@ -407,6 +423,7 @@ export function useMission() {
           frankyDesign: frankyData.result,
           backendDesign: zoroData.result,
           businessAnalysis: agentArchitecturePayload,
+          databaseDesign: databaseDesignPayload,
         }),
       });
       addLog("Usopp Completed");
@@ -446,7 +463,8 @@ export function useMission() {
         },
         requirement,
         analysis,
-        architecture
+        architecture,
+        databaseDesign
       );
 
       const docSteps = getArtifactProgressSteps(bundle.artifacts);
@@ -760,6 +778,7 @@ export function useMission() {
     requirementAnalysis,
     architectureContract,
     businessArchitecturePlan,
+    databaseDesignContract,
     exportState,
     canExport: exportState.canExport,
     exportEnabled: exportState.exportEnabled,

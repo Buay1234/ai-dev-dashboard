@@ -12,6 +12,7 @@ import {
 } from "@/lib/project-generator";
 import type { RequirementAnalysisContract } from "@/lib/requirement-parser";
 import type { ArchitectureContract } from "@/lib/domain-library/types";
+import type { DatabaseDesignContract } from "@/lib/database-designer/entity-relationship";
 
 /** In-memory store — V22 docs + V23 source project */
 const bundleHistory: ArtifactBundle[] = [];
@@ -23,10 +24,17 @@ export function runArtifactGeneration(
   outputs: AgentOutputs,
   requirement: string,
   analysis?: RequirementAnalysisContract | null,
-  architecture?: ArchitectureContract | null
+  architecture?: ArchitectureContract | null,
+  databaseDesign?: DatabaseDesignContract | null
 ): { bundle: ArtifactBundle; project: GeneratedProjectBundle } {
   const artifacts = generateProjectArtifacts(outputs);
-  const project = generateProjectBundle(outputs, requirement, analysis, architecture);
+  const project = generateProjectBundle(
+    outputs,
+    requirement,
+    analysis,
+    architecture,
+    databaseDesign
+  );
 
   const bundle: ArtifactBundle = {
     id: `mission-${Date.now()}`,
